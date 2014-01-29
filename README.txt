@@ -53,9 +53,4 @@ www/app/modules/commerce
 3. Modify settings.js to include the commerce module:
 
 /* Contrib Modules */
-drupalgap.modules.contrib = {
-  /* ... */
-  {"name":"commerce"},
-  /* ... */
-};
-
+Drupal.modules.contrib['commerce'] = {};
