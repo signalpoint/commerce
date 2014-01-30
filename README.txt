@@ -8,16 +8,14 @@ sandbox, so play at your own risk. ;)
 | Drupal Setup |
 |==============|
 
-1. Download and enable the Commerce Services module on your Drupal site:
+1. Download and enable the Commerce Services and the Commerce DrupalGap modules
+   on your Drupal site:
 
      https://drupal.org/project/commerce_services
      https://drupal.org/sandbox/signalpoint/2031039
 
 2. Go to 'admin/structure/services/list/drupalgap/resources' and enable the
    following resources:
-   
-    commerce_drupalgap
-      *enable all resources for commerce_drupalgap*
     
     product-display
        index
@@ -54,3 +52,4 @@ www/app/modules/commerce
 
 /* Contrib Modules */
 Drupal.modules.contrib['commerce'] = {};
+
