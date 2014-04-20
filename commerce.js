@@ -36,6 +36,7 @@ function commerce_services_postprocess(options, data) {
     if (options.service == 'system' && options.resource == 'connect') {
       if (data.commerce) {
         drupalgap.commerce = data.commerce;
+        dpm(drupalgap.commerce);
       }
       else {
         console.log('commerce_services_postprocess - failed to extract ' +
@@ -77,9 +78,9 @@ function commerce_cart_field_formatter_view(entity_type, entity, field,
   try {
     var element = {};
     if (!empty(items)) {
-      // Since each item needs to be fetched asynchronously, we'll place an
-      // empty container for each, then fetch them, then populate their
-      // containers.
+      // Since each item needs to be fetched asynchronously via a product index,
+      // we'll place an empty container for each, then fetch them, then populate
+      // their containers.
       var last_delta;
       $.each(items, function(delta, item){
           element[delta] = _commerce_cart_field_formatter_view_container(
@@ -126,25 +127,46 @@ function _commerce_cart_field_formatter_view_pageshow(options) {
             // display's entity reference(s). Note, this is not the same field
             // name used by the Product reference field on the node content
             // type.
+
             // @TODO - is this dynamic, or is it a static name like we have it?
             var product_entities_field_name = 'field_product_entities';
             
-            // If there are any product entities, iterate over them.
+            // If there are any product entities, extract the product ids so
+            // a product index can be performed.
             if (product_display[product_entities_field_name]) {
-              var delta = 0;
-              $.each(product_display[product_entities_field_name], function(product_id, product){
-                  commerce_product_load(product_id, {
-                      success: function(loaded_product) {
-                        drupalgap_entity_render_content('commerce_product', loaded_product);
+              
+              var product_ids = [];
+              $.each(product_display[product_entities_field_name], function(product_id, product) {
+                  product_ids.push(product_id);
+              });
+              var query = {
+                filter: {
+                  product_id: product_ids
+                },
+                filter_op: {
+                  product_id: 'in'
+                }
+              };
+              // Index the products, manually render them, then inject them
+              // into their corresponding container(s).
+              commerce_product_index(query, {
+                  success: function(products) {
+                    dpm('commerce_product_index');
+                    dpm(products);
+                    var delta = 0;
+                    $.each(products, function(product_id, product) {
+                        drupalgap_entity_render_content('commerce_product', product);
                         var container_id = _commerce_cart_field_formatter_view_container_id(
                           entity_type,
                           entity_id,
                           delta,
                           product_id
                         );
-                        $('#' + container_id).append(loaded_product.content);
-                      }
-                  });
+                        $('#' + container_id).append(product.content);
+                        delta++;
+                        dpm('Added product to container (' + container_id + ')...');
+                    });
+                  }
               });
             }
           }
@@ -267,5 +289,72 @@ function commerce_product_load(ids, options) {
     entity_retrieve('commerce_product', ids, options);
   }
   catch (error) { console.log('commerce_product_load - ' + error); }
+}
+
+/**
+* Perform a product index.
+* @param {Object} query
+* @param {Object} options
+*/
+function commerce_product_index(query, options) {
+  try {
+    // @TODO - we can't use jDrupal's entity_index API since the name of the
+    // service is 'product' for the 'commerce_product' entity type. jDrupal
+    // would either need to be patched to allow for a more flexible path to be
+    // set on the entity_index API, or the Commerce Services module needs to
+    // adhere to the strict entity type machine names when declaring service
+    // resources.
+    // The commerce_product index uses a service name of just 'product'.
+    /*services_resource_defaults(options, 'commerce_product', 'index');
+    options.service = 'product';
+    entity_index('commerce_product', query, options);*/
+    // Prepare the query string.
+    var query_string = '';
+    if (query.filter) {
+      var filters = '';
+      for (var filter in query.filter) {
+          if (query.filter.hasOwnProperty(filter)) {
+            var key = encodeURIComponent(filter);
+            var value = query.filter[filter];
+            // If the value is an array, each index needs to be placed into the
+            // query string. Otherwise, just place the key value in the query
+            // string.
+            if ($.isArray(value)) {
+              $.each(value, function(i, v) {
+                  filters += key + '[' + i + ']=' + v + '&';
+              });
+            }
+            else {
+              filters += 'filter[' + key + ']=' + value + '&';
+            }
+          }
+      }
+      if (filters != '') {
+        filters = filters.substring(0, filters.length - 1);
+        query_string += '&' + filters;
+      }
+    }
+    if (query.filter_op) {
+      var filter_ops = '';
+      for (var filter in query.filter_op) {
+          if (query.filter_op.hasOwnProperty(filter)) {
+            var key = encodeURIComponent(filter);
+            var value = encodeURIComponent(query.filter_op[filter]);
+            filter_ops += 'filter_op[' + key + ']=' + value + '&';
+          }
+      }
+      if (filter_ops != '') {
+        filter_ops = filter_ops.substring(0, filter_ops.length - 1);
+        query_string += '&' + filter_ops;
+      }
+    }
+    // Make a manual call to the product index service resource.
+    options.method = 'GET';
+    options.path = 'product.json' + query_string;
+    options.service = 'product';
+    options.resource = 'index';
+    Drupal.services.call(options);
+  }
+  catch (error) { console.log('commerce_ - ' + error); }
 }
 
