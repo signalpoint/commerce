@@ -1,10 +1,145 @@
 /**
+ *
+ */
+function commerce_cart_add_to_cart_form(form, form_state, product_display) {
+  try {
+    dpm('commerce_cart_add_to_cart_form');
+    dpm(product_display);
+    
+    // Set the form entity type and bundle.
+    form.entity_type = 'commerce_product';
+    form.bundle = product_display.type;
+    
+    // Determine the internal commerce field name for the product
+    // display's entity reference(s). Note, this is not the same field
+    // name used by the Product reference field on the node content
+    // type.
+
+    // @TODO - is this dynamic, or is it a static name chosen by the site builder?
+    var product_entities_field_name = 'field_product_entities';
+    
+    // If there are any product entities...
+    if (product_display[product_entities_field_name]) {
+      
+      // Keep track of the field names, so we can remove the bunk 0 index
+      // property on their form element item later.
+      var field_names = [];
+      
+      //dpm('commerce_product field_info_instances');
+      var field_info_instances = drupalgap_field_info_instances('commerce_product', product_display.type);
+      //dpm(field_info_instances);
+      
+      // For each field instance on this product, if it has cart
+      // settings, and is an attributed field, iterate over each product
+      // and extract the form element items required to build the
+      // widget.
+      $.each(field_info_instances, function(field_name, field) {
+
+          // Skip fields that aren't part of the cart (e.g. price, images).
+          // @TODO - These fields need be rendered as markup.
+          if (
+            typeof field.commerce_cart_settings === 'undefined' ||
+            field.commerce_cart_settings.attribute_field != 1
+          ) { return; }
+          
+          // Track the field name.
+          field_names.push(field_name);
+
+          // What widget module and widget type are being used on this
+          // field?
+          var module = field.widget.module;
+          var type = field.widget.type;
+
+          // Depending on the module, let's handle the widget type.
+          //dpm(field_name);
+          //dpm(field);
+          switch (module) {
+            
+            // Handle options.
+            case 'options':
+              switch (type) {
+                
+                // Handle select options.
+                case 'options_select':
+                  
+                  // Since this is a field, we need to bundle it into the
+                  // the language code as an item.
+                  form.elements[field_name] = {
+                    title: field.label,
+                    type: 'select',
+                    required: field.required,
+                    default_value: 1
+                  };
+                  form.elements[field_name][product_display.language] = {
+                    0: {
+                      options: { }
+                    }
+                  };
+                  // Go over each product, extracting the options for
+                  // this field.
+                  $.each(product_display[product_entities_field_name], function(product_id, product) {
+                      var value = parseInt(product[field_name]);
+                      // Skip options that are already set.
+                      if (typeof form.elements[field_name][product_display.language][0].options[value] !== 'undefined') { return; }
+                      form.elements[field_name][product_display.language][0].options[value] = '' + value;
+                  });
+                  
+                  break;
+
+                default:
+                  console.log('WARNING: commerce_cart_add_to_cart_form - unsupported type (' + type + ')');
+                  break;
+
+              }                      
+              break;
+
+            default:
+              console.log('WARNING: commerce_cart_add_to_cart_form - unsupported module (' + module + ')');
+              break;
+          }
+          
+      });
+      
+      // Remove the bunk 0 index from the field's form element item, no clue why
+      // this gets onto the item in the first place, le sigh.
+      if (field_names.length > 0) {
+        $.each(field_names, function(index, field_name) {
+            delete(form.elements[field_name][product_display.language][0].options[0]);
+        });
+      }
+      
+    }
+    
+    // Add to cart submit button.
+    form.elements.submit = {
+      type: 'submit',
+      value: 'Add to cart'
+    };
+    
+    return form;
+  }
+  catch (error) { console.log('commerce_cart_add_to_cart_form - ' + error); }
+}
+
+/**
+ * Define the form's submit function.
+ */
+function commerce_cart_add_to_cart_form_submit(form, form_state) {
+  try {
+    alert('Hello ' + form_state.values.name + '!');
+  }
+  catch (error) { console.log('commerce_cart_add_to_cart_form_submit - ' + error); }
+}
+
+/**
  * Implements hook_services_preprocess().
  */
 function commerce_services_preprocess(options) {
   try {
     //dpm(options);
-    // Set the correct path for the service resource call.
+    // Since the Commerce Services doesn't use a fully qualified namespace
+    // prefix on their resources, we have to manually set the correct path for
+    // the service resource calls.
     switch (options.service) {
       case 'commerce_product_display':
         if (options.resource == 'retrieve') {
@@ -36,6 +171,7 @@ function commerce_services_postprocess(options, data) {
     if (options.service == 'system' && options.resource == 'connect') {
       if (data.commerce) {
         drupalgap.commerce = data.commerce;
+        dpm('commerce');
         dpm(drupalgap.commerce);
       }
       else {
@@ -78,32 +214,26 @@ function commerce_cart_field_formatter_view(entity_type, entity, field,
   try {
     var element = {};
     if (!empty(items)) {
-      // Since each item needs to be fetched asynchronously via a product index,
-      // we'll place an empty container for each, then fetch them, then populate
-      // their containers.
-      var last_delta;
-      $.each(items, function(delta, item){
-          element[delta] = _commerce_cart_field_formatter_view_container(
-            entity_type,
-            entity.nid,
-            delta,
-            item
-          );
-          last_delta = delta;
-      });
       
-      // Now set up a jQM pageshow handler to fetch the products. We'll place
-      // the script code onto the last delta of the item collection.
-      element[last_delta].markup += drupalgap_jqm_page_event_script_code({
-          page_id: drupalgap_get_page_id(),
-          jqm_page_event: 'pageshow',
-          jqm_page_event_callback:
-            '_commerce_cart_field_formatter_view_pageshow',
-          jqm_page_event_args: JSON.stringify({
-              entity_type: entity_type,
-              entity_id: entity.nid
-          })
-      });
+      // Generate markup that will place an empty div placeholder and pageshow
+      // handler that will dynamically inject the cart into the page.
+      var markup = 
+        '<div id="' + commerce_cart_container_id(entity_type, entity.nid) + '"></div>' +
+        drupalgap_jqm_page_event_script_code({
+            page_id: drupalgap_get_page_id(),
+            jqm_page_event: 'pageshow',
+            jqm_page_event_callback:
+              '_commerce_cart_field_formatter_view_pageshow',
+            jqm_page_event_args: JSON.stringify({
+                entity_type: entity_type,
+                entity_id: entity.nid
+            })
+        });
+      
+      // Place the markup on delta zero of the element.
+      element[0] = {
+        markup: markup
+      };
     }
     return element;
   }
@@ -122,60 +252,11 @@ function _commerce_cart_field_formatter_view_pageshow(options) {
     // Load the product display.
     commerce_product_display_load(entity_id, {
         success: function(product_display) {
-          try {
-            // Determine the internal commerce field name for the product
-            // display's entity reference(s). Note, this is not the same field
-            // name used by the Product reference field on the node content
-            // type.
-
-            // @TODO - is this dynamic, or is it a static name like we have it?
-            var product_entities_field_name = 'field_product_entities';
-            
-            // If there are any product entities, extract the product ids so
-            // a product index can be performed.
-            if (product_display[product_entities_field_name]) {
-              
-              var product_ids = [];
-              $.each(product_display[product_entities_field_name], function(product_id, product) {
-                  product_ids.push(product_id);
-              });
-              var query = {
-                filter: {
-                  product_id: product_ids
-                },
-                filter_op: {
-                  product_id: 'in'
-                }
-              };
-              // Index the products, manually render them, then inject them
-              // into their corresponding container(s).
-              commerce_product_index(query, {
-                  success: function(products) {
-                    dpm('commerce_product_index');
-                    dpm(products);
-                    var delta = 0;
-                    $.each(products, function(product_id, product) {
-                        drupalgap_entity_render_content('commerce_product', product);
-                        var container_id = _commerce_cart_field_formatter_view_container_id(
-                          entity_type,
-                          entity_id,
-                          delta,
-                          product_id
-                        );
-                        $('#' + container_id).append(product.content);
-                        delta++;
-                        dpm('Added product to container (' + container_id + ')...');
-                    });
-                  }
-              });
-            }
-          }
-          catch (error) {
-            console.log(
-              '_commerce_cart_field_formatter_view_pageshow - ' + 
-              'commerce_product_display_load - success - ' + error
-            );
-          }
+          // Inject the add to cart form html into the container.
+          var form_html = drupalgap_get_form('commerce_cart_add_to_cart_form', product_display);
+          //var form = drupalgap_form_load('commerce_cart_add_to_cart_form', product_display);
+          //var form_html = drupalgap_form_render(form);
+          $('#' + commerce_cart_container_id(entity_type, entity_id)).html(form_html).trigger('create');
         }
     });
   }
@@ -185,51 +266,14 @@ function _commerce_cart_field_formatter_view_pageshow(options) {
 }
 
 /**
- * 
- * @param {String} entity_type
- * @param {Number} entity_id
- * @param {Number} delta
- * @param {Object} item
- * @return {String}
+ * Given an entity type and entity id, this will return the html attribute id to
+ * use on the empty div container.
  */
-function _commerce_cart_field_formatter_view_container(
-  entity_type,
-  entity_id,
-  delta,
-  item
-) {
+function commerce_cart_container_id(entity_type, entity_id) {
   try {
-    var id = _commerce_cart_field_formatter_view_container_id(
-      entity_type,
-      entity_id,
-      delta,
-      item.product_id
-    );
-    return {
-      markup: '<div id="' + id + '"></div>'
-    };
+    return 'commerce_cart_container_' + entity_type + '_' + entity_id;
   }
-  catch (error) {
-    console.log('_commerce_cart_field_formatter_view_container - ' + error);
-  }
-}
-
-/**
- *
- */
-function _commerce_cart_field_formatter_view_container_id(
-  entity_type,
-  entity_id,
-  delta,
-  product_id
-) {
-  try {
-    return entity_type + '_' + entity_id + '_' + delta + '_' + product_id +
-      '_commerce_cart_container';
-  }
-  catch (error) {
-    console.log('_commerce_cart_field_formatter_view_container_id - ' + error);
-  }
+  catch (error) { console.log('commerce_cart_container_id - ' + error); }
 }
 
 /**
@@ -355,6 +399,6 @@ function commerce_product_index(query, options) {
     options.resource = 'index';
     Drupal.services.call(options);
   }
-  catch (error) { console.log('commerce_ - ' + error); }
+  catch (error) { console.log('commerce_product_index - ' + error); }
 }
 
