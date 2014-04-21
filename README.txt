@@ -14,7 +14,21 @@ sandbox, so play at your own risk. ;)
      https://drupal.org/project/commerce_services
      https://drupal.org/sandbox/signalpoint/2031039
 
-2. Go to 'admin/structure/services/list/drupalgap/resources' and enable the
+2. VERY IMPORTANT - After enabling the Commerce DrupalGap module on your site,
+                    open up your Drupal Database (e.g. MySQL PHPMyAdmin) and
+                    verify the module weight for commerce_drupalgap is 1001. Do
+                    this by executing the following query, and looking at the
+                    weight value:
+                    
+     SELECT name, weight FROM system WHERE name = 'commerce_drupalgap';
+     
+                    If it isn't set to 1001, execute this query:
+     
+     UPDATE system SET weight = 1001 WHERE name = 'commerce_drupalgap';
+
+                    Then flush all of Drupal's caches.
+
+3. Go to 'admin/structure/services/list/drupalgap/resources' and enable the
    following resources:
     
     product-display
