@@ -3,8 +3,8 @@
  */
 function commerce_cart_add_to_cart_form(form, form_state, product_display) {
   try {
-    dpm('commerce_cart_add_to_cart_form');
-    dpm(product_display);
+    //dpm('commerce_cart_add_to_cart_form');
+    //dpm(product_display);
     
     // Set the form entity type and bundle.
     form.entity_type = 'commerce_product';
@@ -81,7 +81,7 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
                       var value = parseInt(product[field_name]);
                       // Skip options that are already set.
                       if (typeof form.elements[field_name][product_display.language][0].options[value] !== 'undefined') { return; }
-                      form.elements[field_name][product_display.language][0].options[value] = '' + value;
+                      form.elements[field_name][product_display.language][0].options[value] = product[field_name + '_taxonomy_term_name'];
                   });
                   
                   break;
@@ -100,14 +100,6 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
           
       });
       
-      // Remove the bunk 0 index from the field's form element item, no clue why
-      // this gets onto the item in the first place, le sigh.
-      if (field_names.length > 0) {
-        $.each(field_names, function(index, field_name) {
-            delete(form.elements[field_name][product_display.language][0].options[0]);
-        });
-      }
-      
     }
     
     // Add to cart submit button.
@@ -115,7 +107,6 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
       type: 'submit',
       value: 'Add to cart'
     };
-    
     return form;
   }
   catch (error) { console.log('commerce_cart_add_to_cart_form - ' + error); }
@@ -126,7 +117,7 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
  */
 function commerce_cart_add_to_cart_form_submit(form, form_state) {
   try {
-    alert('Hello ' + form_state.values.name + '!');
+    dpm(form_state);
   }
   catch (error) { console.log('commerce_cart_add_to_cart_form_submit - ' + error); }
 }
@@ -254,8 +245,6 @@ function _commerce_cart_field_formatter_view_pageshow(options) {
         success: function(product_display) {
           // Inject the add to cart form html into the container.
           var form_html = drupalgap_get_form('commerce_cart_add_to_cart_form', product_display);
-          //var form = drupalgap_form_load('commerce_cart_add_to_cart_form', product_display);
-          //var form_html = drupalgap_form_render(form);
           $('#' + commerce_cart_container_id(entity_type, entity_id)).html(form_html).trigger('create');
         }
     });
@@ -349,9 +338,6 @@ function commerce_product_index(query, options) {
     // adhere to the strict entity type machine names when declaring service
     // resources.
     // The commerce_product index uses a service name of just 'product'.
-    /*services_resource_defaults(options, 'commerce_product', 'index');
-    options.service = 'product';
-    entity_index('commerce_product', query, options);*/
     // Prepare the query string.
     var query_string = '';
     if (query.filter) {
