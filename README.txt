@@ -67,3 +67,8 @@ www/app/modules/commerce
 /* Contrib Modules */
 Drupal.modules.contrib['commerce'] = {};
 
+4. Update jDrupal to development snapshot in the www folder, and update the
+   index.html file to point to it.
+
+   http://www.easystreet3.com/jDrupal/download
+
