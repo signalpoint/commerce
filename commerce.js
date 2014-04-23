@@ -118,9 +118,55 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
 function commerce_cart_add_to_cart_form_submit(form, form_state) {
   try {
     dpm(form_state);
+    // Assemble the line item from the form state values.
+    var line_item = {};
+    // Get the user's current cart.
+    commerce_cart_index(null, {
+        success: function(result) {
+          dpm('commerce_cart_index');
+          dpm(result);
+          if (result.length == 0) {
+            // The cart doesn't exist yet, create it, then add the line item to it.
+            commerce_cart_create({
+                success: function(order) {
+                  _commerce_line_item_add_to_order(order, line_item);
+                }
+            });
+          }
+          else {
+            // The cart already exists, add the line item to it.
+            $.each(result, function(order_id, order) {
+              _commerce_line_item_add_to_order(order, line_item);
+              return false; // Process only one cart.
+            });
+          }
+        }
+    });
   }
   catch (error) { console.log('commerce_cart_add_to_cart_form_submit - ' + error); }
 }
+// Item successfully added to your cart
+// SKU
+// Size
+// Color
+// Quantity
+// Total
+// Go to checkout
+// Continue Shopping
+
+/**
+ *
+ */
+function _commerce_line_item_add_to_order(order, line_item) {
+  try {
+    dpm('_commerce_line_item_add_to_order');
+    dpm(order);
+    dpm(line_item);
+    //commerce_line_item_create();
+  }
+  catch (error) { console.log('_commerce_line_item_add_to_order - ' + error); }
+}
+
 
 /**
  * Implements hook_services_preprocess().
@@ -296,6 +342,60 @@ function commerce_price_field_formatter_view(entity_type, entity, field,
   catch (error) {
     console.log('commerce_price_field_formatter_view - ' + error);
   }
+}
+
+/**
+ * Creates a cart.
+ * @param {Object} options
+ */
+function commerce_cart_create(options) {
+  try {
+    options.method = 'POST';
+    options.contentType = 'application/x-www-form-urlencoded';
+    options.path = 'cart.json';
+    if (typeof options.flatten_fields !== 'undefined' && options.flatten_fields === false) {
+      options.path += '&flatten_fields=false';
+    }
+    options.service = 'cart';
+    options.resource = 'create';
+    Drupal.services.call(options);
+  }
+  catch (error) { console.log('commerce_cart_create - ' + error); }
+}
+
+/**
+ * Performs a cart index.
+ * @param {Object} query
+ * @param {Object} options
+ */
+function commerce_cart_index(query, options) {
+  try {
+    options.method = 'GET';
+    options.path = 'cart.json';
+    options.service = 'cart';
+    options.resource = 'index';
+    Drupal.services.call(options);
+  }
+  catch (error) { console.log('commerce_cart_index - ' + error); }
+}
+
+/**
+ * Creates a cart.
+ * @param {Object} options
+ */
+function commerce_line_item_create(options) {
+  try {
+    options.method = 'POST';
+    options.contentType = 'application/x-www-form-urlencoded';
+    options.path = 'line-item.json';
+    if (typeof options.flatten_fields !== 'undefined' && options.flatten_fields === false) {
+      options.path += '&flatten_fields=false';
+    }
+    options.service = 'line-item';
+    options.resource = 'create';
+    Drupal.services.call(options);
+  }
+  catch (error) { console.log('commerce_line_item_create - ' + error); }
 }
 
 /**
