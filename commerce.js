@@ -1,4 +1,60 @@
 /**
+ * Implements hook_block_info().
+ */
+function commerce_block_info() {
+  var blocks = {
+    commerce_cart: {
+      delta: 'commerce_cart',
+      module: 'commerce'
+    }
+  };
+  return blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function commerce_block_view(delta) {
+  var content = '';
+  if (delta == 'commerce_cart') {
+    var page_id = drupalgap_get_page_id();
+    var cart_container_id = page_id + '_cart';
+    content = '<div id="' + cart_container_id + '"></div>' +
+      drupalgap_jqm_page_event_script_code({
+          page_id: page_id,
+          jqm_page_event: 'pageshow',
+          jqm_page_event_callback: '_commerce_block_view',
+          jqm_page_event_args: JSON.stringify({
+              cart_container_id: cart_container_id
+          })
+      });
+  }
+  return content;
+}
+
+
+/**
+ *
+ */
+function _commerce_block_view(options) {
+  try {
+    commerce_cart_index(null, {
+        success: function(result) {
+          if (result.length != 0) {
+            $.each(result, function(order_id, order) {
+                var html = theme('commerce_cart_block', { order: order });
+                $('#' + options.cart_container_id).html(html).trigger('create');            
+                return false; // Process only one cart.
+            });
+          }
+        }
+    });
+    
+  }
+  catch (error) { console.log('_commerce_block_view - ' + error); }
+}
+
+/**
  *
  */
 function commerce_cart_add_to_cart_form(form, form_state, product_display) {
@@ -117,6 +173,7 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
  */
 function commerce_cart_add_to_cart_form_submit(form, form_state) {
   try {
+    dpm('commerce_cart_add_to_cart_form_submit');
     dpm(form_state);
     // Assemble the line item from the form state values.
     var line_item = {};
@@ -162,7 +219,17 @@ function _commerce_line_item_add_to_order(order, line_item) {
     dpm('_commerce_line_item_add_to_order');
     dpm(order);
     dpm(line_item);
-    //commerce_line_item_create();
+    commerce_line_item_create({
+        data: {
+          order_id: order.order_id,
+          type: 'product',
+          commerce_product: 73
+        },
+        success: function(result) {
+          dpm('commerce_line_item_create');
+          dpm(result);
+        }
+    });
   }
   catch (error) { console.log('_commerce_line_item_add_to_order - ' + error); }
 }
@@ -206,11 +273,7 @@ function commerce_services_postprocess(options, data) {
   try {
     // Extract the commerce object from the system connect result data.
     if (options.service == 'system' && options.resource == 'connect') {
-      if (data.commerce) {
-        drupalgap.commerce = data.commerce;
-        dpm('commerce');
-        dpm(drupalgap.commerce);
-      }
+      if (data.commerce) { drupalgap.commerce = data.commerce; }
       else {
         console.log('commerce_services_postprocess - failed to extract ' +
           ' commerce object from system connect. Is the commerce_drupalgap ' +
@@ -266,7 +329,7 @@ function commerce_cart_field_formatter_view(entity_type, entity, field,
                 entity_id: entity.nid
             })
         });
-      
+
       // Place the markup on delta zero of the element.
       element[0] = {
         markup: markup
@@ -393,6 +456,21 @@ function commerce_line_item_create(options) {
     }
     options.service = 'line-item';
     options.resource = 'create';
+    // Since the service resource is expecting URL encoded data, change the data
+    // object into a string.
+    if (options.data) {
+      var data = '';
+      for (var property in options.data) {
+        if (options.data.hasOwnProperty(property)) {
+          data += property + '=' + options.data[property] + '&';
+        }
+      }
+      // Remove last ampersand.
+      if (data != '') {
+        data = data.substring(0, data.length - 1);
+        options.data = data;
+      }
+    }
     Drupal.services.call(options);
   }
   catch (error) { console.log('commerce_line_item_create - ' + error); }
@@ -486,5 +564,27 @@ function commerce_product_index(query, options) {
     Drupal.services.call(options);
   }
   catch (error) { console.log('commerce_product_index - ' + error); }
+}
+
+/**
+ * Theme a commerce cart block.
+ */
+function theme_commerce_cart_block(variables) {
+  try {
+    dpm(variables.order);
+    var html = '';
+    var item_count = 0;
+    if (variables.order.commerce_line_items) {
+      item_count = variables.order.commerce_line_items.length;
+    }
+    if (item_count > 0) {
+      var link_text = variables.order.commerce_order_total_formatted +
+        ' (' + item_count + ' ' + drupalgap_format_plural(item_count, 'item', 'items') + ')';
+      var link = l(link_text, 'cart');
+      html += theme('jqm_item_list', { items: [link] });
+    }
+    return html;
+  }
+  catch (error) { console.log('theme_commerce_cart_block - ' + error); }
 }
 
