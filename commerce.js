@@ -1,3 +1,12 @@
+// Holds onto the current product display.
+var _commerce_product_display = null;
+
+// Holds onto the current product display's referenced product entity field names.
+var _commerce_product_attribute_field_names = null;
+
+// Holds onto the currne tproduct display's referenced product id.
+var _commerce_product_display_product_id = null;
+
 /**
  * Implements hook_block_info().
  */
@@ -32,7 +41,6 @@ function commerce_block_view(delta) {
   return content;
 }
 
-
 /**
  *
  */
@@ -62,6 +70,15 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
     //dpm('commerce_cart_add_to_cart_form');
     //dpm(product_display);
     
+    // Set the global product display variable so we have access to it later.
+    _commerce_product_display = product_display;
+    
+    // Prep array to hold attribute field names.
+    _commerce_product_attribute_field_names = [];
+    
+    // Clear the referenced product id.
+    _commerce_product_display_product_id = null;
+    
     // Set the form entity type and bundle.
     form.entity_type = 'commerce_product';
     form.bundle = product_display.type;
@@ -76,10 +93,6 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
     
     // If there are any product entities...
     if (product_display[product_entities_field_name]) {
-      
-      // Keep track of the field names, so we can remove the bunk 0 index
-      // property on their form element item later.
-      var field_names = [];
       
       //dpm('commerce_product field_info_instances');
       var field_info_instances = drupalgap_field_info_instances('commerce_product', product_display.type);
@@ -98,8 +111,8 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
             field.commerce_cart_settings.attribute_field != 1
           ) { return; }
           
-          // Track the field name.
-          field_names.push(field_name);
+          // Save this field name for later.
+          _commerce_product_attribute_field_names.push(field_name);
 
           // What widget module and widget type are being used on this
           // field?
@@ -126,20 +139,26 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
                     required: field.required,
                     default_value: 1
                   };
-                  form.elements[field_name][product_display.language] = {
-                    0: {
-                      options: { }
-                    }
-                  };
-                  // Go over each product, extracting the options for
-                  // this field.
-                  $.each(product_display[product_entities_field_name], function(product_id, product) {
-                      var value = parseInt(product[field_name]);
-                      // Skip options that are already set.
-                      if (typeof form.elements[field_name][product_display.language][0].options[value] !== 'undefined') { return; }
-                      form.elements[field_name][product_display.language][0].options[value] = product[field_name + '_taxonomy_term_name'];
-                  });
                   
+                  // Build the field items (only one), then go over each product,
+                  // extracting the options for this field, sipping any that are
+                  // already set. Then attach an onchange handler and attach the
+                  // field items to the element. Save a reference to the first
+                  // product id, in case the user adds the default product to
+                  // the cart.
+                  var field_items = { 0: { options: { attributes: {
+                    onchange: '_commerce_cart_attribute_change()',
+                    'class': '_commerce_cart_attribute',
+                    field_name: field_name
+                  } } } };
+                  $.each(product_display[product_entities_field_name], function(product_id, product) {
+                      if (!_commerce_product_display_product_id) { _commerce_product_display_product_id = product_id; }
+                      var value = parseInt(product[field_name]);
+                      if (typeof field_items[0].options[value] !== 'undefined') { return; }
+                      field_items[0].options[value] = product[field_name + '_taxonomy_term_name'];
+                  });
+                  form.elements[field_name][product_display.language] = field_items;
+
                   break;
 
                 default:
@@ -173,10 +192,8 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
  */
 function commerce_cart_add_to_cart_form_submit(form, form_state) {
   try {
-    dpm('commerce_cart_add_to_cart_form_submit');
-    dpm(form_state);
-    // Assemble the line item from the form state values.
-    var line_item = {};
+    //dpm('commerce_cart_add_to_cart_form_submit');
+    //dpm(form_state);
     // Get the user's current cart.
     commerce_cart_index(null, {
         success: function(result) {
@@ -186,14 +203,14 @@ function commerce_cart_add_to_cart_form_submit(form, form_state) {
             // The cart doesn't exist yet, create it, then add the line item to it.
             commerce_cart_create({
                 success: function(order) {
-                  _commerce_line_item_add_to_order(order, line_item);
+                  _commerce_line_item_add_to_order(order);
                 }
             });
           }
           else {
             // The cart already exists, add the line item to it.
             $.each(result, function(order_id, order) {
-              _commerce_line_item_add_to_order(order, line_item);
+              _commerce_line_item_add_to_order(order);
               return false; // Process only one cart.
             });
           }
@@ -202,6 +219,54 @@ function commerce_cart_add_to_cart_form_submit(form, form_state) {
   }
   catch (error) { console.log('commerce_cart_add_to_cart_form_submit - ' + error); }
 }
+
+/**
+ *
+ */
+function _commerce_cart_attribute_change() {
+  try {
+    _commerce_product_display_product_id = _commerce_product_display_get_current_product_id();
+  }
+  catch (error) { console.log('_commerce_cart_attribute_change - ' + error); }
+}
+
+/**
+ * Determines the current product id from the current page's product display
+ * selected attributes. Returns the product id.
+ */
+function _commerce_product_display_get_current_product_id() {
+  try {
+    // Iterate over each attribute on the page, pull out the field_name and
+    // value, and set them aside, so they can later be used to determine which
+    // product is currently selected.
+    var selector = '#' + drupalgap_get_page_id() + ' select._commerce_cart_attribute';
+    var attributes = { };
+    $(selector).each(function(index, object) {
+        var field_name = $(object).attr('field_name')
+        var value = $(object).val();
+        attributes[field_name] = value;
+    });
+    // Now figure out which product id is currently selected by iterating over
+    // the the referenced product entities on the current product display.
+    var product_id = null;
+    $.each(_commerce_product_display['field_product_entities'], function(pid, product) {
+        var match = true;
+        $.each(_commerce_product_attribute_field_names, function(index, field_name) {
+            if (product[field_name] != attributes[field_name]) {
+              match = false;
+              return false;
+            }
+        });
+        if (match) {
+          product_id = pid;
+          return false;
+        }
+    });
+    return product_id;
+  }
+  catch (error) { console.log('_commerce_product_display_get_current_product_id - ' + error); }
+}
+
 // Item successfully added to your cart
 // SKU
 // Size
@@ -214,16 +279,18 @@ function commerce_cart_add_to_cart_form_submit(form, form_state) {
 /**
  *
  */
-function _commerce_line_item_add_to_order(order, line_item) {
+function _commerce_line_item_add_to_order(order) {
   try {
-    dpm('_commerce_line_item_add_to_order');
-    dpm(order);
-    dpm(line_item);
+    var product_id = _commerce_product_display_get_current_product_id();
+    if (!product_id) {
+      console.log('WARNING: _commerce_line_item_add_to_order - no product_id');
+      return;
+    }
     commerce_line_item_create({
         data: {
           order_id: order.order_id,
           type: 'product',
-          commerce_product: 73
+          commerce_product: product_id
         },
         success: function(result) {
           dpm('commerce_line_item_create');
@@ -571,7 +638,6 @@ function commerce_product_index(query, options) {
  */
 function theme_commerce_cart_block(variables) {
   try {
-    dpm(variables.order);
     var html = '';
     var item_count = 0;
     if (variables.order.commerce_line_items) {
