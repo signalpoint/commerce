@@ -14,7 +14,7 @@ sandbox, so play at your own risk. ;)
      https://drupal.org/project/commerce_services
      https://drupal.org/sandbox/signalpoint/2031039
 
-2. Go to 'admin/structure/services/list/drupalgap/resources' and enable the
+2. Go to admin/structure/services/list/drupalgap/resources and enable the
    following resources:
     
     product-display
@@ -35,6 +35,17 @@ sandbox, so play at your own risk. ;)
        retrieve
        udpate
        delete
+
+3. Go to admin/people/permissions and consider enabling these permissions for
+   the roles mentioned:
+   
+     Anonymous User
+       View any product of any type
+     
+     Authenticated User
+      View own orders of any type
+      View own Order orders
+      View any product of any type
 
 |=================|
 | DrupalGap Setup |
