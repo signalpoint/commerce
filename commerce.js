@@ -4,8 +4,24 @@ var _commerce_product_display = null;
 // Holds onto the current product display's referenced product entity field names.
 var _commerce_product_attribute_field_names = null;
 
-// Holds onto the currne tproduct display's referenced product id.
+// Holds onto the current product display's referenced product id.
 var _commerce_product_display_product_id = null;
+
+/**
+ *
+ */
+function commerce_menu() {
+  try {
+    var items = {};
+    items['cart'] = {
+      'title': 'Shopping cart',
+      'page_callback': 'commerce_cart_view',
+      'pageshow': 'commerce_cart_view_pageshow'
+    };
+    return items;
+  }
+  catch (error) { console.log('commerce_menu - ' + error); }
+}
 
 /**
  * Implements hook_block_info().
@@ -57,9 +73,38 @@ function _commerce_block_view(options) {
           }
         }
     });
-    
   }
   catch (error) { console.log('_commerce_block_view - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_cart_view() {
+  try {
+    return '<div id="commerce_cart"></div>';
+  }
+  catch (error) { console.log('commerce_cart_view - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_cart_view_pageshow() {
+  try {
+    commerce_cart_index(null, {
+        success: function(result) {
+          if (result.length != 0) {
+            $.each(result, function(order_id, order) {
+                var html = theme('commerce_cart', { order: order });
+                $('#commerce_cart').html(html).trigger('create');            
+                return false; // Process only one cart.
+            });
+          }
+        }
+    });
+  }
+  catch (error) { console.log('commerce_cart_view_pageshow - ' + error); }
 }
 
 /**
@@ -141,7 +186,7 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
                   };
                   
                   // Build the field items (only one), then go over each product,
-                  // extracting the options for this field, sipping any that are
+                  // extracting the options for this field, skipping any that are
                   // already set. Then attach an onchange handler and attach the
                   // field items to the element. Save a reference to the first
                   // product id, in case the user adds the default product to
@@ -203,14 +248,20 @@ function commerce_cart_add_to_cart_form_submit(form, form_state) {
             // The cart doesn't exist yet, create it, then add the line item to it.
             commerce_cart_create({
                 success: function(order) {
-                  _commerce_line_item_add_to_order(order);
+                  _commerce_line_item_add_to_order({
+                      order: order,
+                      success: _commerce_cart_add_to_cart_form_submit_success
+                  });
                 }
             });
           }
           else {
             // The cart already exists, add the line item to it.
             $.each(result, function(order_id, order) {
-              _commerce_line_item_add_to_order(order);
+              _commerce_line_item_add_to_order({
+                  order: order,
+                  success: _commerce_cart_add_to_cart_form_submit_success
+              });
               return false; // Process only one cart.
             });
           }
@@ -218,6 +269,16 @@ function commerce_cart_add_to_cart_form_submit(form, form_state) {
     });
   }
   catch (error) { console.log('commerce_cart_add_to_cart_form_submit - ' + error); }
+}
+
+/**
+ *
+ */
+function _commerce_cart_add_to_cart_form_submit_success(result) {
+  try {
+    drupalgap_goto('cart', { reloadPage: true });
+  }
+  catch (error) { console.log('_commerce_cart_add_to_cart_form_submit_success - ' + error); }
 }
 
 /**
@@ -279,7 +340,7 @@ function _commerce_product_display_get_current_product_id() {
 /**
  *
  */
-function _commerce_line_item_add_to_order(order) {
+function _commerce_line_item_add_to_order(options) {
   try {
     var product_id = _commerce_product_display_get_current_product_id();
     if (!product_id) {
@@ -288,13 +349,14 @@ function _commerce_line_item_add_to_order(order) {
     }
     commerce_line_item_create({
         data: {
-          order_id: order.order_id,
+          order_id: options.order.order_id,
           type: 'product',
           commerce_product: product_id
         },
         success: function(result) {
           dpm('commerce_line_item_create');
           dpm(result);
+          if (options.success) { options.success(result); }
         }
     });
   }
@@ -634,6 +696,44 @@ function commerce_product_index(query, options) {
 }
 
 /**
+ * Theme a commerce cart.
+ */
+function theme_commerce_cart(variables) {
+  try {
+    dpm(variables.order);
+
+    var html = '';
+
+    // Determine how many line items are in the cart.
+    var item_count = 0;
+    if (variables.order.commerce_line_items) {
+      item_count = variables.order.commerce_line_items.length;
+    }
+    if (item_count == 0) { return 'Your shopping cart is empty.'; }    
+    
+    // Render each line item.
+    var items = [];
+    $.each(variables.order.commerce_line_items_entities, function(line_item_id, line_item) {
+        dpm(line_item);
+        var html = '<h2>' + line_item.line_item_label + '</h2>' +
+          '<p><strong>Price</strong>: ' + line_item.commerce_unit_price_formatted + '</p>' +
+          '<p><strong>Quantity</strong>: ' + line_item.quantity + '</p>' +
+          '<p class="ui-li-aside"><strong>Total</strong>: ' + line_item.commerce_total_formatted + '</p>';
+        items.push(html);
+    });
+    html += theme('jqm_item_list', { items: items });
+    
+    // Render the order total and the buttons.
+    html += theme('commerce_cart_total', { order: variables.order }) +
+      theme('commerce_cart_buttons', { order: variables.order });
+      
+    // Return the rendered cart.
+    return html;
+  }
+  catch (error) { console.log('theme_commerce_cart - ' + error); }
+}
+
+/**
  * Theme a commerce cart block.
  */
 function theme_commerce_cart_block(variables) {
@@ -646,11 +746,53 @@ function theme_commerce_cart_block(variables) {
     if (item_count > 0) {
       var link_text = variables.order.commerce_order_total_formatted +
         ' (' + item_count + ' ' + drupalgap_format_plural(item_count, 'item', 'items') + ')';
-      var link = l(link_text, 'cart');
+      var link = l(link_text, 'cart', { reloadPage: true });
       html += theme('jqm_item_list', { items: [link] });
     }
     return html;
   }
   catch (error) { console.log('theme_commerce_cart_block - ' + error); }
+}
+
+/**
+ * Theme the commerce cart buttons.
+ */
+function theme_commerce_cart_buttons(variables) {
+  try {
+    var html =
+      theme('button_link', {
+        text: 'Update cart',
+        path: null,
+        options: {
+          attributes: {
+            'data-icon': 'refresh'
+          }
+        }
+      }) +
+      theme('button_link', {
+        text: 'Checkout',
+        path: null,
+        options: {
+          attributes: {
+            'data-icon': 'check',
+            'data-theme': 'b'
+          }
+        }
+      });
+    return html;
+  }
+  catch (error) { console.log('theme_commerce_cart_buttons - ' + error); }
+}
+
+/**
+ * Theme a commerce cart total.
+ */
+function theme_commerce_cart_total(variables) {
+  try {
+    return '<h3 class="ui-bar ui-bar-a ui-corner-all">Order Total: ' +
+      variables.order.commerce_order_total_formatted +
+    '</h3>';
+  }
+  catch (error) { console.log('theme_commerce_cart_total - ' + error); }
 }
 
