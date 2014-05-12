@@ -292,6 +292,21 @@ function _commerce_cart_attribute_change() {
 }
 
 /**
+ * The click handler for the "Remove" button on a line item on the cart page.
+ */
+function _commerce_cart_line_item_remove(line_item_id) {
+  try {
+    commerce_line_item_delete(line_item_id, {
+        success: function(result) {
+          // @TODO - drupalgap core needs to be improved to reload the current page.
+          drupalgap_goto('cart', { reloadPage: true });
+        }
+    });
+  }
+  catch (error) { console.log('_commerce_cart_line_item_remove - ' + error); }
+}
+
+/**
  * Determines the current product id from the current page's product display
  * selected attributes. Returns the product id.
  */
@@ -361,56 +376,6 @@ function _commerce_line_item_add_to_order(options) {
     });
   }
   catch (error) { console.log('_commerce_line_item_add_to_order - ' + error); }
-}
-
-
-/**
- * Implements hook_services_preprocess().
- */
-function commerce_services_preprocess(options) {
-  try {
-    //dpm(options);
-    // Since the Commerce Services doesn't use a fully qualified namespace
-    // prefix on their resources, we have to manually set the correct path for
-    // the service resource calls.
-    switch (options.service) {
-      case 'commerce_product_display':
-        if (options.resource == 'retrieve') {
-          options.path = options.path.replace(
-            'commerce_product_display',
-            'product-display'
-          );  
-        }
-        break;
-      case 'commerce_product':
-        if (options.resource == 'retrieve') {
-          options.path = options.path.replace(
-            'commerce_product',
-            'product'
-          );  
-        }
-        break;
-    }
-  }
-  catch (error) { console.log('commerce_services_preprocess - ' + error); }
-}
-
-/**
- * Implements hook_services_success().
- */
-function commerce_services_postprocess(options, data) {
-  try {
-    // Extract the commerce object from the system connect result data.
-    if (options.service == 'system' && options.resource == 'connect') {
-      if (data.commerce) { drupalgap.commerce = data.commerce; }
-      else {
-        console.log('commerce_services_postprocess - failed to extract ' +
-          ' commerce object from system connect. Is the commerce_drupalgap ' +
-          ' module enabled on your Drupal site?');
-      }
-    }
-  }
-  catch (error) { drupalgap_error(error); }
 }
 
 /**
@@ -536,6 +501,69 @@ function commerce_price_field_formatter_view(entity_type, entity, field,
   }
 }
 
+/************************************|
+ *                                   |
+ * Commerce Services Implementations |
+ *                                   |
+ ************************************/
+
+/**
+ * Implements hook_services_preprocess().
+ */
+function commerce_services_preprocess(options) {
+  try {
+    //dpm(options);
+    // Since the Commerce Services doesn't use a fully qualified namespace
+    // prefix on their resources, we have to manually set the correct path for
+    // the service resource calls.
+    switch (options.service) {
+      case 'commerce_product_display':
+        if (options.resource == 'retrieve') {
+          options.path = options.path.replace(
+            'commerce_product_display',
+            'product-display'
+          );  
+        }
+        break;
+      case 'commerce_product':
+        if (options.resource == 'retrieve') {
+          options.path = options.path.replace(
+            'commerce_product',
+            'product'
+          );  
+        }
+        break;
+      case 'commerce_line_item':
+        if (options.resource == 'delete') {
+          options.path = options.path.replace(
+            'commerce_line_item',
+            'line-item'
+          );  
+        }
+        break;
+    }
+  }
+  catch (error) { console.log('commerce_services_preprocess - ' + error); }
+}
+
+/**
+ * Implements hook_services_success().
+ */
+function commerce_services_postprocess(options, data) {
+  try {
+    // Extract the commerce object from the system connect result data.
+    if (options.service == 'system' && options.resource == 'connect') {
+      if (data.commerce) { drupalgap.commerce = data.commerce; }
+      else {
+        console.log('commerce_services_postprocess - failed to extract ' +
+          ' commerce object from system connect. Is the commerce_drupalgap ' +
+          ' module enabled on your Drupal site?');
+      }
+    }
+  }
+  catch (error) { drupalgap_error(error); }
+}
+
 /**
  * Creates a cart.
  * @param {Object} options
@@ -603,6 +631,17 @@ function commerce_line_item_create(options) {
     Drupal.services.call(options);
   }
   catch (error) { console.log('commerce_line_item_create - ' + error); }
+}
+
+/**
+ * Deletes a line item.
+ */
+function commerce_line_item_delete(ids, options) {
+  try {
+    services_resource_defaults(options, 'commerce_line_item', 'delete');
+    entity_delete('commerce_line_item', ids, options);
+  }
+  catch (error) { console.log('commerce_line_item_delete - ' + error); }
 }
 
 /**
@@ -695,6 +734,12 @@ function commerce_product_index(query, options) {
   catch (error) { console.log('commerce_product_index - ' + error); }
 }
 
+/*********************************|
+ *                                |
+ * Commerce Theme Implementations |
+ *                                |
+ *********************************/
+
 /**
  * Theme a commerce cart.
  */
@@ -714,12 +759,7 @@ function theme_commerce_cart(variables) {
     // Render each line item.
     var items = [];
     $.each(variables.order.commerce_line_items_entities, function(line_item_id, line_item) {
-        dpm(line_item);
-        var html = '<h2>' + line_item.line_item_label + '</h2>' +
-          '<p><strong>Price</strong>: ' + line_item.commerce_unit_price_formatted + '</p>' +
-          '<p><strong>Quantity</strong>: ' + line_item.quantity + '</p>' +
-          '<p class="ui-li-aside"><strong>Total</strong>: ' + line_item.commerce_total_formatted + '</p>';
-        items.push(html);
+        items.push(theme('commerce_cart_line_item', { line_item: line_item }));
     });
     html += theme('jqm_item_list', { items: items });
     
@@ -782,6 +822,55 @@ function theme_commerce_cart_buttons(variables) {
     return html;
   }
   catch (error) { console.log('theme_commerce_cart_buttons - ' + error); }
+}
+
+/**
+ * Themes a commerce cart line item.
+ */
+function theme_commerce_cart_line_item(variables) {
+  try {
+    var html = '<h2>' + variables.line_item.line_item_label + '</h2>' +
+      '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>' +
+      theme('commerce_cart_line_item_quantity', { line_item: variables.line_item }) +
+      theme('commerce_cart_line_item_remove', { line_item: variables.line_item }) +
+      '<p class="ui-li-aside"><strong>Total</strong>: ' + variables.line_item.commerce_total_formatted + '</p>';
+    return html;
+  }
+  catch (error) { console.log('theme_commerce_cart_line_item - ' + error); }
+}
+
+/**
+ * Themes a commerce cart line item quantity widget.
+ */
+function theme_commerce_cart_line_item_quantity(variables) {
+  try {
+    var input = theme('textfield', {
+        attributes: {
+          value: variables.line_item.quantity
+        }
+    });
+    var html = '<p><strong>Quantity</strong>: ' + input + '</p>';
+    return html;
+  }
+  catch (error) { console.log('theme_commerce_cart_line_item_quantity - ' + error); }
+}
+
+/**
+ * Themes a commerce cart line item remove button.
+ */
+function theme_commerce_cart_line_item_remove(variables) {
+  try {
+    dpm(variables.line_item);
+    var html = '<p>' +
+      l('Remove', null, {
+        attributes: {
+          onclick: '_commerce_cart_line_item_remove(' + variables.line_item.line_item_id + ')'
+        }
+    }) +
+    '</p>';
+    return html;
+  }
+  catch (error) { console.log('theme_commerce_cart_line_item - ' + error); }
 }
 
 /**
