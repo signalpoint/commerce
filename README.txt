@@ -72,3 +72,6 @@ Drupal.modules.contrib['commerce'] = {};
 
    http://www.easystreet3.com/jDrupal/download
 
+5. Optional, place the 'commerce_cart' block in a region on your theme in the
+   settings.js file.
+
