@@ -50,6 +50,17 @@ sandbox, so play at your own risk. ;)
        udpate
        delete
 
+4. Go to admin/people/permissions and consider enabling these permissions for
+   the roles mentioned:
+   
+     Anonymous User
+       View any product of any type
+     
+     Authenticated User
+      View own orders of any type
+      View own Order orders
+      View any product of any type
+
 |=================|
 | DrupalGap Setup |
 |=================|
