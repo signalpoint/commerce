@@ -61,6 +61,12 @@ sandbox, so play at your own risk. ;)
       View own Order orders
       View any product of any type
 
+5. Go to e.g. admin/structure/types/manage/tops/display/drupalgap and set your
+   desired fields to be visible when viewing a product in DrupalGap. At minimum,
+   you'll need to add the 'Product variations' field to the display, to allow
+   the 'Add to cart' form to be shown to users. Do this for each type of product
+   available: admin/structure/types
+
 |=================|
 | DrupalGap Setup |
 |=================|
