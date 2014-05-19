@@ -1,3 +1,6 @@
+// Holds onto order objects, keyed by order_id.
+var _commerce_order = {};
+
 // Holds onto the current product display.
 var _commerce_product_display = null;
 
@@ -96,6 +99,10 @@ function commerce_cart_view_pageshow() {
         success: function(result) {
           if (result.length != 0) {
             $.each(result, function(order_id, order) {
+                // Set aside the order so it can be used later without fetching
+                // it again.
+                _commerce_order[order_id] = order;
+                // Theme the cart and render it on the page.
                 var html = theme('commerce_cart', { order: order });
                 $('#commerce_cart').html(html).trigger('create');            
                 return false; // Process only one cart.
@@ -242,8 +249,8 @@ function commerce_cart_add_to_cart_form_submit(form, form_state) {
     // Get the user's current cart.
     commerce_cart_index(null, {
         success: function(result) {
-          dpm('commerce_cart_index');
-          dpm(result);
+          //dpm('commerce_cart_index');
+          //dpm(result);
           if (result.length == 0) {
             // The cart doesn't exist yet, create it, then add the line item to it.
             commerce_cart_create({
@@ -289,21 +296,6 @@ function _commerce_cart_attribute_change() {
     _commerce_product_display_product_id = _commerce_product_display_get_current_product_id();
   }
   catch (error) { console.log('_commerce_cart_attribute_change - ' + error); }
-}
-
-/**
- * The click handler for the "Remove" button on a line item on the cart page.
- */
-function _commerce_cart_line_item_remove(line_item_id) {
-  try {
-    commerce_line_item_delete(line_item_id, {
-        success: function(result) {
-          // @TODO - drupalgap core needs to be improved to reload the current page.
-          drupalgap_goto('cart', { reloadPage: true });
-        }
-    });
-  }
-  catch (error) { console.log('_commerce_cart_line_item_remove - ' + error); }
 }
 
 /**
@@ -369,8 +361,8 @@ function _commerce_line_item_add_to_order(options) {
           commerce_product: product_id
         },
         success: function(result) {
-          dpm('commerce_line_item_create');
-          dpm(result);
+          //dpm('commerce_line_item_create');
+          //dpm(result);
           if (options.success) { options.success(result); }
         }
     });
@@ -501,6 +493,32 @@ function commerce_price_field_formatter_view(entity_type, entity, field,
   }
 }
 
+/************************|
+ *                       |
+ * Commerce Primary Keys |
+ *                       |
+ ************************/
+
+/**
+ *
+ */
+function commerce_order_primary_key() {
+  try {
+    return 'order_id';
+  }
+  catch (error) { console.log('commerce_order_primary_key - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_line_item_primary_key() {
+  try {
+    return 'line_item_id';
+  }
+  catch (error) { console.log('commerce_order_primary_key - ' + error); }
+}
+
 /************************************|
  *                                   |
  * Commerce Services Implementations |
@@ -517,6 +535,22 @@ function commerce_services_preprocess(options) {
     // prefix on their resources, we have to manually set the correct path for
     // the service resource calls.
     switch (options.service) {
+      case 'commerce_line_item':
+        if (options.resource == 'update' || options.resource == 'delete') {
+          options.path = options.path.replace(
+            'commerce_line_item',
+            'line-item'
+          );  
+        }
+        break;
+      case 'commerce_order':
+        if (options.resource == 'retrieve' || options.resource == 'update') {
+          options.path = options.path.replace(
+            'commerce_order',
+            'order'
+          );  
+        }
+        break;
       case 'commerce_product_display':
         if (options.resource == 'retrieve') {
           options.path = options.path.replace(
@@ -530,14 +564,6 @@ function commerce_services_preprocess(options) {
           options.path = options.path.replace(
             'commerce_product',
             'product'
-          );  
-        }
-        break;
-      case 'commerce_line_item':
-        if (options.resource == 'delete') {
-          options.path = options.path.replace(
-            'commerce_line_item',
-            'line-item'
           );  
         }
         break;
@@ -634,6 +660,19 @@ function commerce_line_item_create(options) {
 }
 
 /**
+ * Update a line item.
+ * @param {Object} line_item
+ * @param {Object} options
+ */
+function commerce_line_item_update(line_item, options) {
+  try {
+    services_resource_defaults(options, 'commerce_line_item', 'update');
+    entity_update('commerce_line_item', null, line_item, options);
+  }
+  catch (error) { console.log('commerce_line_item_update - ' + error); }
+}
+
+/**
  * Deletes a line item.
  */
 function commerce_line_item_delete(ids, options) {
@@ -645,29 +684,78 @@ function commerce_line_item_delete(ids, options) {
 }
 
 /**
- * Retrieves a node.
+ * Retrieves an order.
  * @param {Number} ids
  * @param {Object} options
  */
-function commerce_product_display_load(ids, options) {
+/*function commerce_order_retrieve(ids, options) {
+  try {
+    services_resource_defaults(options, 'commerce_order', 'retrieve');
+    entity_retrieve('commerce_order', ids, options);
+  }
+  catch (error) { console.log('commerce_order_retrieve - ' + error); }
+}*/
+
+/**
+ * Updates an order.
+ * @param {Number} ids
+ * @param {Object} options
+ */
+function commerce_order_update(order, options) {
+  try {
+    order.order_id = parseInt(order.order_id);
+    var path = 'commerce_order/' + order.order_id + '.json' /* &flatten_fields=false */;
+    Drupal.services.call({
+        method: 'PUT',
+        path: path,
+        service: 'commerce_order',
+        resource: 'update',
+        entity_type: 'commerce_order',
+        entity_id: order.order_id,
+        bundle: null,
+        data: JSON.stringify(order),
+        success: function(data) {
+          try {
+            if (options.success) { options.success(data); }
+          }
+          catch (error) { console.log('commerce_order_update - success - ' + error); }
+        },
+        error: function(xhr, status, message) {
+          try {
+            if (options.error) { options.error(xhr, status, message); }
+          }
+          catch (error) { console.log('commerce_order_update - error - ' + error); }
+        }
+    });
+  }
+  catch (error) { console.log('commerce_order_update - ' + error); }
+}
+
+
+/**
+ * Retrieves a product display.
+ * @param {Number} ids
+ * @param {Object} options
+ */
+function commerce_product_display_retrieve(ids, options) {
   try {
     services_resource_defaults(options, 'commerce_product_display', 'retrieve');
     entity_retrieve('commerce_product_display', ids, options);
   }
-  catch (error) { console.log('commerce_product_display_load - ' + error); }
+  catch (error) { console.log('commerce_product_display_retrieve - ' + error); }
 }
 
 /**
- * Retrieves a node.
+ * Retrieves a commerce product.
  * @param {Number} ids
  * @param {Object} options
  */
-function commerce_product_load(ids, options) {
+function commerce_product_retrieve(ids, options) {
   try {
     services_resource_defaults(options, 'commerce_product', 'retrieve');
     entity_retrieve('commerce_product', ids, options);
   }
-  catch (error) { console.log('commerce_product_load - ' + error); }
+  catch (error) { console.log('commerce_product_retrieve - ' + error); }
 }
 
 /**
@@ -734,6 +822,126 @@ function commerce_product_index(query, options) {
   catch (error) { console.log('commerce_product_index - ' + error); }
 }
 
+/*******************|
+ *                  |
+ * Service Wrappers |
+ *                  |
+ *******************/
+
+/**
+ * Saves a line item.
+ * @param {Object} line_item
+ * @param {Object} options
+ */
+function commerce_line_item_save(line_item, options) {
+  try {
+    commerce_line_item_update(line_item, options);
+  }
+  catch (error) { console.log('commerce_line_item_save - ' + error); }
+}
+
+/**
+ * Loads a product display.
+ * @param {Number} ids
+ * @param {Object} options
+ */
+function commerce_product_display_load(ids, options) {
+  try {
+    commerce_product_display_retrieve(ids, options);
+  }
+  catch (error) { console.log('commerce_product_display_load - ' + error); }
+}
+
+/**
+ * Loads a commerce order.
+ * @param {Number} ids
+ * @param {Object} options
+ */
+/*function commerce_order_load(ids, options) {
+  try {
+    commerce_order_retrieve(ids, options);
+  }
+  catch (error) { console.log('commerce_order_load - ' + error); }
+}*/
+
+/**
+ * Saves a commerce order.
+ * @param {Object} order
+ * @param {Object} options
+ */
+function commerce_order_save(order, options) {
+  try {
+    commerce_order_update(order, options);
+  }
+  catch (error) { console.log('commerce_order_save - ' + error); }
+}
+
+/**
+ * Loads a commerce product.
+ * @param {Number} ids
+ * @param {Object} options
+ */
+function commerce_product_load(ids, options) {
+  try {
+    commerce_product_retrieve(ids, options);
+  }
+  catch (error) { console.log('commerce_product_load - ' + error); }
+}
+
+/**************************|
+ *                         |
+ * Commerce Click Handlers |
+ *                         |
+ **************************/
+
+/**
+ * The click handler for the "Remove" button on a line item on the cart page.
+ */
+function _commerce_cart_line_item_remove(order_id, line_item_id) {
+  try {
+    commerce_line_item_delete(line_item_id, {
+        success: function(result) {
+          // @TODO - once DG core supports reloading the same page, we can just
+          // make a call to drupalgap_goto(). Just re-run the pageshow event
+          // handler.
+          //drupalgap_goto('cart', { reloadPage: true });
+          commerce_cart_view_pageshow();
+        }
+    });
+  }
+  catch (error) { console.log('_commerce_cart_line_item_remove - ' + error); }
+}
+
+/**
+ * Handle clicks on the "Update cart" button.
+ */
+function commerce_cart_button_update_click(order_id) {
+  try {
+    // @TODO - this is working, but since it appears we can't use the order
+    // update resource to make one single call to update line item quantities,
+    // we have manually update each line item, which results in multiple
+    // server calls, and multiple cart rebuilds on success.
+    var order = _commerce_order[order_id];
+    $.each(order.commerce_line_items_entities, function(line_item_id, line_item) {
+        var quantity = $('#commerce_cart_line_item_quantity_' + line_item_id).val() + '.00';
+        var _quantity = order.commerce_line_items_entities[line_item_id].quantity;
+        if (quantity != _quantity) {
+          var line_item = {
+            line_item_id: parseInt(line_item_id),
+            quantity: quantity
+          };
+          commerce_line_item_save(line_item, {
+              quantity: quantity,
+              success: function(result) {
+                commerce_cart_view_pageshow();
+              }
+          });
+        }
+    });
+  }
+  catch (error) { console.log('commerce_cart_button_update_click - ' + error); }
+}
+
 /*********************************|
  *                                |
  * Commerce Theme Implementations |
@@ -745,7 +953,6 @@ function commerce_product_index(query, options) {
  */
 function theme_commerce_cart(variables) {
   try {
-    dpm(variables.order);
 
     var html = '';
 
@@ -759,7 +966,11 @@ function theme_commerce_cart(variables) {
     // Render each line item.
     var items = [];
     $.each(variables.order.commerce_line_items_entities, function(line_item_id, line_item) {
-        items.push(theme('commerce_cart_line_item', { line_item: line_item }));
+        var item = theme('commerce_cart_line_item', {
+          line_item: line_item,
+          order: variables.order
+        });
+        items.push(item);
     });
     html += theme('jqm_item_list', { items: items });
     
@@ -805,13 +1016,14 @@ function theme_commerce_cart_buttons(variables) {
         path: null,
         options: {
           attributes: {
-            'data-icon': 'refresh'
+            'data-icon': 'refresh',
+            onclick: 'commerce_cart_button_update_click(' + variables.order.order_id + ')'
           }
         }
       }) +
       theme('button_link', {
         text: 'Checkout',
-        path: null,
+        path: 'checkout',
         options: {
           attributes: {
             'data-icon': 'check',
@@ -829,10 +1041,16 @@ function theme_commerce_cart_buttons(variables) {
  */
 function theme_commerce_cart_line_item(variables) {
   try {
-    var html = '<h2>' + variables.line_item.line_item_label + '</h2>' +
+      var html = '<h2>' + variables.line_item.line_item_label + '</h2>' +
       '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>' +
-      theme('commerce_cart_line_item_quantity', { line_item: variables.line_item }) +
-      theme('commerce_cart_line_item_remove', { line_item: variables.line_item }) +
+      theme('commerce_cart_line_item_quantity', {
+          line_item: variables.line_item,
+          order: variables.order
+      }) +
+      theme('commerce_cart_line_item_remove', {
+          line_item: variables.line_item,
+          order: variables.order
+      }) +
       '<p class="ui-li-aside"><strong>Total</strong>: ' + variables.line_item.commerce_total_formatted + '</p>';
     return html;
   }
@@ -844,12 +1062,19 @@ function theme_commerce_cart_line_item(variables) {
  */
 function theme_commerce_cart_line_item_quantity(variables) {
   try {
-    var input = theme('textfield', {
-        attributes: {
-          value: variables.line_item.quantity
-        }
-    });
-    var html = '<p><strong>Quantity</strong>: ' + input + '</p>';
+    //dpm('theme_commerce_cart_line_item_quantity');
+    //dpm(variables);
+    var id = 'commerce_cart_line_item_quantity_' + variables.line_item.line_item_id;
+    var attributes = {
+      type: 'number',
+      id: id,
+      value: Math.floor(variables.line_item.quantity),
+      line_item_id: variables.line_item.line_item_id,
+      min: '1',
+      step: '1' 
+    };
+    var input = '<input ' +  drupalgap_attributes(attributes) + ' />';
+    var html = '<label for="' + id + '">Quantity</label>' + input + '';
     return html;
   }
   catch (error) { console.log('theme_commerce_cart_line_item_quantity - ' + error); }
@@ -860,11 +1085,10 @@ function theme_commerce_cart_line_item_quantity(variables) {
  */
 function theme_commerce_cart_line_item_remove(variables) {
   try {
-    dpm(variables.line_item);
     var html = '<p>' +
       l('Remove', null, {
         attributes: {
-          onclick: '_commerce_cart_line_item_remove(' + variables.line_item.line_item_id + ')'
+          onclick: '_commerce_cart_line_item_remove(' + variables.order.order_id + ', ' + variables.line_item.line_item_id + ')'
         }
     }) +
     '</p>';
