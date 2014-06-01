@@ -1,3 +1,9 @@
+/****************************|
+ *                           |
+ * Commerce Global Variables |
+ *                           |
+ ****************************/
+
 // Holds onto order objects, keyed by order_id.
 var _commerce_order = {};
 
@@ -10,8 +16,28 @@ var _commerce_product_attribute_field_names = null;
 // Holds onto the current product display's referenced product id.
 var _commerce_product_display_product_id = null;
 
+/********************************|
+ *                               |
+ * Commerce Hook Implementations |
+ *                               |
+ ********************************/
+
 /**
- *
+ * Implements hook_install().
+ */
+function commerce_install() {
+  try {
+    var css_file_path =
+      drupalgap_get_path('module', 'commerce') + '/commerce.css';
+    drupalgap_add_css(css_file_path);
+  }
+  catch (error) {
+    console.log('commerce_install - ' + error);
+  }
+}
+
+/**
+ * Implements hook_menu().
  */
 function commerce_menu() {
   try {
@@ -21,10 +47,40 @@ function commerce_menu() {
       'page_callback': 'commerce_cart_view',
       'pageshow': 'commerce_cart_view_pageshow'
     };
+    items['checkout/%'] = {
+      'title': 'Checkout',
+      'page_callback': 'drupalgap_get_form',
+      'page_arguments': ['commerce_checkout_view', 1],
+      'pageshow': 'commerce_checkout_view_pageshow'
+    };
     return items;
   }
   catch (error) { console.log('commerce_menu - ' + error); }
 }
+
+/**
+ * Implements hook_services_success().
+ */
+function commerce_services_postprocess(options, data) {
+  try {
+    // Extract the commerce object from the system connect result data.
+    if (options.service == 'system' && options.resource == 'connect') {
+      if (data.commerce) { drupalgap.commerce = data.commerce; }
+      else {
+        console.log('commerce_services_postprocess - failed to extract ' +
+          ' commerce object from system connect. Is the commerce_drupalgap ' +
+          ' module enabled on your Drupal site?');
+      }
+    }
+  }
+  catch (error) { console.log('commerce_services_postprocess - ' + error); }
+}
+
+/******************|
+ *                 |
+ * Commerce Blocks |
+ *                 |
+ ******************/
 
 /**
  * Implements hook_block_info().
@@ -47,7 +103,7 @@ function commerce_block_view(delta) {
   if (delta == 'commerce_cart') {
     var page_id = drupalgap_get_page_id();
     var cart_container_id = page_id + '_cart';
-    content = '<div id="' + cart_container_id + '"></div>' +
+    content = '<div id="' + cart_container_id + '" class="commerce_cart"></div>' +
       drupalgap_jqm_page_event_script_code({
           page_id: page_id,
           jqm_page_event: 'pageshow',
@@ -79,6 +135,12 @@ function _commerce_block_view(options) {
   }
   catch (error) { console.log('_commerce_block_view - ' + error); }
 }
+
+/*****************|
+ *                |
+ * Commerce Pages |
+ *                |
+ *****************/
 
 /**
  *
@@ -112,6 +174,196 @@ function commerce_cart_view_pageshow() {
     });
   }
   catch (error) { console.log('commerce_cart_view_pageshow - ' + error); }
+}
+
+/**
+ * The checkout page.
+ */
+function commerce_checkout_view(form, form_state, order_id) {
+  try {
+    // @NOTE - when testing, if you sent the app's front page to the checkout
+    // page, the drupalgap.commerce object may not be available yet. It's better
+    // to set the front page to the cart page instead.
+    //dpm(drupalgap.commerce);
+    
+    // Billing Information
+    form.elements['billing_information'] = {
+      title: 'Billing Information',
+      markup: ''
+    };
+    form.elements['billing_name_line'] = {
+      type: 'textfield',
+      title: 'Full name',
+      required: true
+    };
+    form.elements['billing_country'] = {
+      title: 'Country',
+      type: 'select',
+      options: {
+        'US': 'United States',
+        'UK': 'United Kingdom',
+        'CA': 'Canada'
+      },
+      default_value: 'US'
+    };
+    form.elements['billing_thoroughfare'] = {
+      type: 'textfield',
+      title: 'Address 1',
+      required: true
+    };
+    form.elements['billing_premise'] = {
+      type: 'textfield',
+      title: 'Address 2',
+      required: false
+    };
+    form.elements['billing_locality'] = {
+      type: 'textfield',
+      title: 'City',
+      required: true
+    };
+    form.elements['billing_administrative_area'] = {
+      title: 'State',
+      type: 'select',
+      options: {
+        'TX': 'Texas'
+      },
+      default_value: 'TX',
+      required: true
+    };
+    form.elements['billing_postal_code'] = {
+      type: 'textfield',
+      title: 'Zip',
+      required: true
+    };
+    
+    // Shipping Information
+    form.elements['shipping_information'] = {
+      title: 'Shipping Information',
+      markup: ''
+    };
+    form.elements['customer_profile_copy'] = {
+      title: 'Same as Billing Information',
+      type: 'checkbox',
+      description: '',
+      default_value: 1,
+      options: {
+        attributes: {
+          onclick: '_commerce_checkout_customer_profile_copy_onclick()'
+        }
+      }
+    };
+    form.elements['shipping_name_line'] = {
+      type: 'textfield',
+      title: 'Full name',
+      required: true
+    };
+    form.elements['shipping_country'] = {
+      title: 'Country',
+      type: 'select',
+      options: {
+        'US': 'United States',
+        'UK': 'United Kingdom',
+        'CA': 'Canada'
+      },
+      default_value: 'US'
+    };
+    form.elements['shipping_thoroughfare'] = {
+      type: 'textfield',
+      title: 'Address 1',
+      required: true
+    };
+    form.elements['shipping_premise'] = {
+      type: 'textfield',
+      title: 'Address 2',
+      required: false
+    };
+    form.elements['shipping_locality'] = {
+      type: 'textfield',
+      title: 'City',
+      required: true
+    };
+    form.elements['shipping_administrative_area'] = {
+      title: 'State',
+      type: 'select',
+      options: {
+        'TX': 'Texas'
+      },
+      default_value: 'TX',
+      required: true
+    };
+    form.elements['shipping_postal_code'] = {
+      type: 'textfield',
+      title: 'Zip',
+      required: true
+    };
+    
+    // Buttons
+    form.elements['submit'] = {
+      type: 'submit',
+      value: 'Continue to next Step'
+    };
+    form.buttons['cancel'] = drupalgap_form_cancel_button();
+
+    return form;
+    
+    return '<div id="commerce_checkout"></div>';
+  }
+  catch (error) { console.log('commerce_checkout_view - ' + error); }
+}
+
+/**
+ * The checkout page pageshow handler.
+ */
+function commerce_checkout_view_pageshow(form_id, order_id) {
+  try {
+    commerce_checkout_customer_profile_copy_toggle();
+  }
+  catch (error) { console.log('commerce_checkout_view_pageshow - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_checkout_shipping_element_names() {
+  try {
+    return [
+      'shipping_name_line',
+      'shipping_country',
+      'shipping_thoroughfare',
+      'shipping_premise',
+      'shipping_locality',
+      'shipping_administrative_area',
+      'shipping_postal_code'
+    ];
+  }
+  catch (error) { console.log(' - ' + error); }
+}
+
+/**
+ *
+ */
+function _commerce_checkout_customer_profile_copy_onclick() {
+  try {
+    commerce_checkout_customer_profile_copy_toggle();
+  }
+  catch (error) { console.log('_commerce_checkout_customer_profile_copy_onclick - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_checkout_customer_profile_copy_toggle() {
+  try {
+    var checked = $('#edit-commerce-checkout-view-customer-profile-copy').is(':checked');
+    // Hide the shipping input fields.
+    var names = commerce_checkout_shipping_element_names();
+    $.each(names, function(index, name) {
+        var selector = '.' + drupalgap_form_get_element_container_class(name).replace('form-item ', '');
+        if (!checked) { $(selector).show(); }
+        else { $(selector).hide(); }
+    });
+  }
+  catch (error) { console.log('commerce_checkout_customer_profile_copy_toggle - ' + error); }
 }
 
 /**
@@ -334,15 +586,6 @@ function _commerce_product_display_get_current_product_id() {
   }
   catch (error) { console.log('_commerce_product_display_get_current_product_id - ' + error); }
 }
-
-// Item successfully added to your cart
-// SKU
-// Size
-// Color
-// Quantity
-// Total
-// Go to checkout
-// Continue Shopping
 
 /**
  *
@@ -570,24 +813,6 @@ function commerce_services_preprocess(options) {
     }
   }
   catch (error) { console.log('commerce_services_preprocess - ' + error); }
-}
-
-/**
- * Implements hook_services_success().
- */
-function commerce_services_postprocess(options, data) {
-  try {
-    // Extract the commerce object from the system connect result data.
-    if (options.service == 'system' && options.resource == 'connect') {
-      if (data.commerce) { drupalgap.commerce = data.commerce; }
-      else {
-        console.log('commerce_services_postprocess - failed to extract ' +
-          ' commerce object from system connect. Is the commerce_drupalgap ' +
-          ' module enabled on your Drupal site?');
-      }
-    }
-  }
-  catch (error) { drupalgap_error(error); }
 }
 
 /**
@@ -1023,7 +1248,7 @@ function theme_commerce_cart_buttons(variables) {
       }) +
       theme('button_link', {
         text: 'Checkout',
-        path: 'checkout',
+        path: 'checkout/' + variables.order.order_id,
         options: {
           attributes: {
             'data-icon': 'check',
