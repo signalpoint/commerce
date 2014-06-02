@@ -1,4 +1,7 @@
 .commerce_cart {
   clear: both;
 }
+.field-name-cart-placeholder label {
+  margin-bottom: 2em;
+}
 
