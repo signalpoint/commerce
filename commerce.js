@@ -28,7 +28,7 @@ var _commerce_product_display_product_id = null;
 function commerce_install() {
   try {
     var css_file_path =
-      drupalgap_get_path('module', 'commerce') + '/commerce.css';
+            drupalgap_get_path('module', 'commerce') + '/commerce.css';
     drupalgap_add_css(css_file_path);
   }
   catch (error) {
@@ -64,6 +64,12 @@ function commerce_menu() {
       'page_callback': 'drupalgap_get_form',
       'page_arguments': ['commerce_checkout_review_order_view', 2],
       'pageshow': 'commerce_checkout_review_order_view_pageshow'
+    };
+    items['checkout/complete/%'] = {
+      'title': 'Checkout Complete',
+      'page_callback': 'commerce_checkout_complete_view',
+      'pageshow': 'commerce_checkout_complete_view_pageshow',
+      'page_arguments': [2]
     };
     return items;
   }
@@ -134,18 +140,20 @@ function commerce_block_view(delta) {
 function _commerce_block_view(options) {
   try {
     commerce_cart_index(null, {
-        success: function(result) {
-          if (result.length != 0) {
-            $.each(result, function(order_id, order) {
-                var html = theme('commerce_cart_block', { order: order });
-                $('#' + options.cart_container_id).html(html).trigger('create');            
-                return false; // Process only one cart.
-            });
-          }
+      success: function(result) {
+        if (result.length != 0) {
+          $.each(result, function(order_id, order) {
+            var html = theme('commerce_cart_block', {order: order});
+            $('#' + options.cart_container_id).html(html).trigger('create');
+            return false; // Process only one cart.
+          });
         }
+      }
     });
   }
-  catch (error) { console.log('_commerce_block_view - ' + error); }
+  catch (error) {
+    console.log('_commerce_block_view - ' + error);
+  }
 }
 
 /*****************|
@@ -153,6 +161,49 @@ function _commerce_block_view(options) {
  * Commerce Pages |
  *                |
  *****************/
+/**
+ *
+ */
+function commerce_checkout_complete_view(order_id) {
+  try {
+    return '<div id="commerce_checkout_complete_' + order_id + '"></div>';
+  }
+  catch (error) {
+    console.log('commerce_checkout_complete_view - ' + error);
+  }
+}
+
+
+/**
+ *
+ */
+function commerce_checkout_complete_view_pageshow(order_id) {
+  try {
+    commerce_checkout_complete({
+      data: {
+        order_id: order_id,
+      },
+      success: function(result) {
+        var checkout_complete_html = '<div>Checkout Complete</div>';
+        $('#commerce_checkout_complete_' + order_id).html(checkout_complete_html).trigger('create');
+      },
+      error: function(xhr, status, message) {
+        try {
+          if (options.error) {
+            options.error(xhr, status, message);
+          }
+        }
+        catch (error) {
+          console.log('commerce_checkout_complete - error - ' + error);
+        }
+      }
+    });
+
+  }
+  catch (error) {
+    console.log('commerce_checkout_complete_pageshow - ' + error);
+  }
+}
 
 /**
  *
