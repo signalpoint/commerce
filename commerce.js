@@ -158,9 +158,8 @@ function _commerce_block_view(options) {
 /**
  *
  */
-function commerce_checkout_complete_view() {
+function commerce_checkout_complete_view(order_id) {
   try {
-     var order_id = arg(2);
     return '<div id="commerce_checkout_complete_' + order_id + '"></div>';
   }
   catch (error) {
