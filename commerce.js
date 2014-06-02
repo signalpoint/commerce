@@ -1516,17 +1516,21 @@ function theme_commerce_cart_buttons(variables) {
  */
 function theme_commerce_cart_line_item(variables) {
   try {
-      var html = '<h2>' + variables.line_item.line_item_label + '</h2>' +
-      '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>' +
-      theme('commerce_cart_line_item_quantity', {
-          line_item: variables.line_item,
-          order: variables.order
+    var html = '<h2>' + variables.line_item.line_item_label + '</h2>' +
+    '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>';
+    if (variables.line_item.type != 'shipping') {
+      html += theme('commerce_cart_line_item_quantity', {
+        line_item: variables.line_item,
+        order: variables.order
       }) +
       theme('commerce_cart_line_item_remove', {
           line_item: variables.line_item,
           order: variables.order
-      }) +
-      '<p class="ui-li-aside"><strong>Total</strong>: ' + variables.line_item.commerce_total_formatted + '</p>';
+      });
+    }
+    html += '<p class="ui-li-aside"><strong>Total</strong>: ' +
+      variables.line_item.commerce_total_formatted +
+    '</p>';
     return html;
   }
   catch (error) { console.log('theme_commerce_cart_line_item - ' + error); }
