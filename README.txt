@@ -73,22 +73,29 @@ sandbox, so play at your own risk. ;)
 
 1. Download the DrupalGap Commerce module:
 
-https://github.com/signalpoint/commerce
+     https://github.com/signalpoint/commerce
 
 2. Extract the module into the www/app/modules folder, so it lives here:
 
-www/app/modules/commerce
+     www/app/modules/commerce
 
 3. Modify settings.js to include the commerce module:
 
-/* Contrib Modules */
-Drupal.modules.contrib['commerce'] = {};
+     /* Contrib Modules */
+     Drupal.modules.contrib['commerce'] = {};
 
 4. Update jDrupal to development snapshot in the www folder, and update the
    index.html file to point to it.
 
-   http://www.easystreet3.com/jDrupal/download
+     http://www.easystreet3.com/jDrupal/download
 
 5. Optional, place the 'commerce_cart' block in a region on your theme in the
-   settings.js file.
+   settings.js file. Here are some recommended default values:
+   
+     commerce_cart: {
+       pages: {
+         mode: 'exclude',
+         value: ['cart', 'checkout/*', 'checkout/shipping/*']
+       }
+     }
 
