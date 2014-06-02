@@ -28,7 +28,7 @@ var _commerce_product_display_product_id = null;
 function commerce_install() {
   try {
     var css_file_path =
-      drupalgap_get_path('module', 'commerce') + '/commerce.css';
+            drupalgap_get_path('module', 'commerce') + '/commerce.css';
     drupalgap_add_css(css_file_path);
   }
   catch (error) {
