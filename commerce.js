@@ -61,8 +61,9 @@ function commerce_menu() {
     };
     items['checkout/complete/%'] = {
       'title': 'Checkout Complete',
-      'page_callback': ['commerce_checkout_complete_view', 2],
+      'page_callback': 'commerce_checkout_complete_view',
       'pageshow': 'commerce_checkout_complete_view_pageshow',
+      'page_arguments': [2],
     };
     return items;
   }
