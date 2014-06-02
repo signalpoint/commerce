@@ -56,8 +56,7 @@ function commerce_menu() {
     items['checkout/shipping/%'] = {
       'title': 'Shipping',
       'page_callback': 'drupalgap_get_form',
-      'page_arguments': ['commerce_checkout_shipping_view', 2],
-      'pageshow': 'commerce_checkout_shipping_view_pageshow'
+      'page_arguments': ['commerce_checkout_shipping_view', 2]
     };
     items['checkout/review/%'] = {
       'title': 'Review Order',
@@ -484,6 +483,12 @@ function commerce_checkout_review_order_view(form, form_state, order_id) {
     // Grab the checkout form state.
     var checkout_info = JSON.parse(variable_get('commerce_checkout_form_state', {}));
     
+    // Cart Review Placeholder
+    form.elements['cart_placeholder'] = {
+      title: 'Review Order',
+      markup: '<div id="' + commerce_checkout_review_cart_container_id(order_id) + '"></div>'
+    };
+    
     // Account Information
     var markup = '<p><strong>Username</strong><br />' + Drupal.user.name + '</p>';
     markup += '<p><strong>E-mail address</strong><br />' + Drupal.user.mail + '</p>';
@@ -535,10 +540,52 @@ function commerce_checkout_review_order_view(form, form_state, order_id) {
 /**
  *
  */
+function commerce_checkout_review_order_view_pageshow(form_id, order_id) {
+  try {
+    var container_id = commerce_checkout_review_cart_container_id(order_id);
+    commerce_order_load(order_id, {
+        success: function(order) {
+          try {
+            var html = '';
+            // Render each line item.
+            var items = [];
+            $.each(order.commerce_line_items_entities, function(line_item_id, line_item) {
+                var item = theme('commerce_cart_line_item_review', {
+                  line_item: line_item,
+                  order: order
+                });
+                items.push(item);
+            });
+            html += theme('jqm_item_list', { items: items });
+            
+            // Render the order total, then inject the html into the container.
+            html += theme('commerce_cart_total', { order: order });
+            $('#' + container_id).html(html).trigger('create');
+          }
+          catch (error) { console.log('commerce_checkout_review_order_view_pageshow - success - ' + error); }
+        }
+    });
+  }
+  catch (error) { console.log('commerce_checkout_review_order_view_pageshow - ' + error); }
+}
+
+/**
+ *
+ */
 function commerce_checkout_review_order_view_submit(form, form_state) {
   try {
   }
   catch (error) { console.log('commerce_checkout_review_order_view_submit - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_checkout_review_cart_container_id(order_id) {
+  try {
+    return 'commerce_checkout_review_cart_container_' + order_id;
+  }
+  catch (error) { console.log('commerce_checkout_review_cart_container_id - ' + error); }
 }
 
 /**
@@ -1163,13 +1210,13 @@ function commerce_line_item_delete(ids, options) {
  * @param {Number} ids
  * @param {Object} options
  */
-/*function commerce_order_retrieve(ids, options) {
+function commerce_order_retrieve(ids, options) {
   try {
     services_resource_defaults(options, 'commerce_order', 'retrieve');
     entity_retrieve('commerce_order', ids, options);
   }
   catch (error) { console.log('commerce_order_retrieve - ' + error); }
-}*/
+}
 
 /**
  * Updates an order.
@@ -1332,12 +1379,12 @@ function commerce_product_display_load(ids, options) {
  * @param {Number} ids
  * @param {Object} options
  */
-/*function commerce_order_load(ids, options) {
+function commerce_order_load(ids, options) {
   try {
     commerce_order_retrieve(ids, options);
   }
   catch (error) { console.log('commerce_order_load - ' + error); }
-}*/
+}
 
 /**
  * Saves a commerce order.
@@ -1537,12 +1584,27 @@ function theme_commerce_cart_line_item(variables) {
 }
 
 /**
+ * Themes a commerce cart line item.
+ */
+function theme_commerce_cart_line_item_review(variables) {
+  try {
+    var quantity = Math.floor(variables.line_item.quantity);
+    var label = variables.line_item.line_item_label;
+    var html = '<h2>' + quantity + ' x ' + label  + '</h2>' +
+    '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>';
+    html += '<p class="ui-li-aside"><strong>Total</strong>: ' +
+      variables.line_item.commerce_total_formatted +
+    '</p>';
+    return html;
+  }
+  catch (error) { console.log('theme_commerce_cart_line_item_review - ' + error); }
+}
+
+/**
  * Themes a commerce cart line item quantity widget.
  */
 function theme_commerce_cart_line_item_quantity(variables) {
   try {
-    //dpm('theme_commerce_cart_line_item_quantity');
-    //dpm(variables);
     var id = 'commerce_cart_line_item_quantity_' + variables.line_item.line_item_id;
     var attributes = {
       type: 'number',
