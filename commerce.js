@@ -59,6 +59,11 @@ function commerce_menu() {
       'page_arguments': ['commerce_checkout_shipping_view', 2],
       'pageshow': 'commerce_checkout_shipping_view_pageshow'
     };
+    items['checkout/complete/%'] = {
+      'title': 'Checkout Complete',
+      'page_callback': ['commerce_checkout_complete_view', 2],
+      'pageshow': 'commerce_checkout_complete_view_pageshow',
+    };
     return items;
   }
   catch (error) { console.log('commerce_menu - ' + error); }
@@ -147,6 +152,51 @@ function _commerce_block_view(options) {
  * Commerce Pages |
  *                |
  *****************/
+/**
+ *
+ */
+function commerce_checkout_complete_view() {
+  try {
+     var order_id = arg(2);
+    return '<div id="commerce_checkout_complete_' + order_id + '"></div>';
+  }
+  catch (error) {
+    console.log('commerce_checkout_complete_view - ' + error);
+  }
+}
+
+
+/**
+ *
+ */
+function commerce_checkout_complete_view_pageshow() {
+  try {
+    var order_id = arg(2);
+    commerce_checkout_complete({
+      data: {
+        order_id: order_id,
+      },
+      success: function(result) {
+        var checkout_complete_html = '<div>Checkout Complete</div>';
+        $('#commerce_checkout_complete_' + order_id).html(checkout_complete_html).trigger('create');
+      },
+      error: function(xhr, status, message) {
+        try {
+          if (options.error) {
+            options.error(xhr, status, message);
+          }
+        }
+        catch (error) {
+          console.log('commerce_checkout_complete - error - ' + error);
+        }
+      }
+    });
+
+  }
+  catch (error) {
+    console.log('commerce_checkout_complete_pageshow - ' + error);
+  }
+}
 
 /**
  *
