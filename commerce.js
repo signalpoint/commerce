@@ -53,6 +53,12 @@ function commerce_menu() {
       'page_arguments': ['commerce_checkout_view', 1],
       'pageshow': 'commerce_checkout_view_pageshow'
     };
+    items['checkout/shipping/%'] = {
+      'title': 'Shipping',
+      'page_callback': 'drupalgap_get_form',
+      'page_arguments': ['commerce_checkout_shipping_view', 2],
+      'pageshow': 'commerce_checkout_shipping_view_pageshow'
+    };
     return items;
   }
   catch (error) { console.log('commerce_menu - ' + error); }
@@ -186,6 +192,14 @@ function commerce_checkout_view(form, form_state, order_id) {
     // to set the front page to the cart page instead.
     //dpm(drupalgap.commerce);
     
+    // @TODO - Need dynamic checkout pane retrieval here.
+    
+    // Order ID
+    form.elements['order_id'] = {
+      type: 'hidden',
+      default_value: order_id
+    };
+    
     // Billing Information
     form.elements['billing_information'] = {
       title: 'Billing Information',
@@ -196,6 +210,7 @@ function commerce_checkout_view(form, form_state, order_id) {
       title: 'Full name',
       required: true
     };
+    // @TODO - need dynamic data fetching here.
     form.elements['billing_country'] = {
       title: 'Country',
       type: 'select',
@@ -324,6 +339,34 @@ function commerce_checkout_view_pageshow(form_id, order_id) {
 /**
  *
  */
+function commerce_checkout_view_validate(form, form_state) {
+  try {
+    // If the shipping info checkbox is checked, fill in the shipping fields
+    // with the billing fields.
+    if (form_state.values['customer_profile_copy']) {
+      var names = commerce_checkout_shipping_element_names();
+      $.each(names, function(index, name) {
+          var _name = name.replace('shipping', 'billing');
+          form_state.values[name] = form_state.values[_name];
+      });
+    }
+  }
+  catch (error) { console.log('commerce_checkout_view_validate - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_checkout_view_submit(form, form_state) {
+  try {
+    drupalgap_goto('checkout/shipping/' + form_state.values['order_id']);
+  }
+  catch (error) { console.log('commerce_checkout_view_submit - ' + error); }
+}
+
+/**
+ *
+ */
 function commerce_checkout_shipping_element_names() {
   try {
     return [
@@ -364,6 +407,43 @@ function commerce_checkout_customer_profile_copy_toggle() {
     });
   }
   catch (error) { console.log('commerce_checkout_customer_profile_copy_toggle - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_checkout_shipping_view(form, form_state, order_id) {
+  try {
+
+    // @TODO - Need dynamic shipping info retrieval here.
+
+    // Order ID
+    form.elements['order_id'] = {
+      type: 'hidden',
+      default_value: order_id
+    };
+    
+    form.elements.my_radio_buttons = {
+      title: 'Radio Station',
+      type: 'radios',
+      options: {
+        0: 'Rock and Roll',
+        1: 'Metal'
+      },
+      default_value: 1
+    };
+
+  }
+  catch (error) { console.log('commerce_checkout_shipping_view - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_checkout_shipping_view_submit(form, form_state) {
+  try {
+  }
+  catch (error) { console.log('commerce_checkout_shipping_view_submit - ' + error); }
 }
 
 /**
