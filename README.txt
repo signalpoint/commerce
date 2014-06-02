@@ -84,6 +84,10 @@ sandbox, so play at your own risk. ;)
      /* Contrib Modules */
      Drupal.modules.contrib['commerce'] = {};
 
+4. Repeat steps #2-3, but for the addressfield module:
+
+     https://github.com/signalpoint/addressfield
+
 4. Update jDrupal to development snapshot in the www folder, and update the
    index.html file to point to it.
 
