@@ -28,7 +28,7 @@ var _commerce_product_display_product_id = null;
 function commerce_install() {
   try {
     var css_file_path =
-      drupalgap_get_path('module', 'commerce') + '/commerce.css';
+            drupalgap_get_path('module', 'commerce') + '/commerce.css';
     drupalgap_add_css(css_file_path);
   }
   catch (error) {
@@ -134,18 +134,20 @@ function commerce_block_view(delta) {
 function _commerce_block_view(options) {
   try {
     commerce_cart_index(null, {
-        success: function(result) {
-          if (result.length != 0) {
-            $.each(result, function(order_id, order) {
-                var html = theme('commerce_cart_block', { order: order });
-                $('#' + options.cart_container_id).html(html).trigger('create');            
-                return false; // Process only one cart.
-            });
-          }
+      success: function(result) {
+        if (result.length != 0) {
+          $.each(result, function(order_id, order) {
+            var html = theme('commerce_cart_block', {order: order});
+            $('#' + options.cart_container_id).html(html).trigger('create');
+            return false; // Process only one cart.
+          });
         }
+      }
     });
   }
-  catch (error) { console.log('_commerce_block_view - ' + error); }
+  catch (error) {
+    console.log('_commerce_block_view - ' + error);
+  }
 }
 
 /*****************|
@@ -170,9 +172,8 @@ function commerce_checkout_complete_view() {
 /**
  *
  */
-function commerce_checkout_complete_view_pageshow() {
+function commerce_checkout_complete_view_pageshow(order_id) {
   try {
-    var order_id = arg(2);
     commerce_checkout_complete({
       data: {
         order_id: order_id,
