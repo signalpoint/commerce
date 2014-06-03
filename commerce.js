@@ -200,7 +200,7 @@ function commerce_checkout_complete_view_pageshow(order_id) {
 
   }
   catch (error) {
-    console.log('commerce_checkout_complete_pageshow - ' + error);
+    console.log('commerce_checkout_complete_view_pageshow - ' + error);
   }
 }
 
@@ -574,6 +574,7 @@ function commerce_checkout_review_order_view_pageshow(form_id, order_id) {
  */
 function commerce_checkout_review_order_view_submit(form, form_state) {
   try {
+    drupalgap_goto('checkout/payment/' + form_state.values['order_id']);
   }
   catch (error) { console.log('commerce_checkout_review_order_view_submit - ' + error); }
 }
@@ -793,8 +794,6 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
  */
 function commerce_cart_add_to_cart_form_submit(form, form_state) {
   try {
-    //dpm('commerce_cart_add_to_cart_form_submit');
-    //dpm(form_state);
     // Get the user's current cart.
     commerce_cart_index(null, {
         success: function(result) {
