@@ -1,8 +1,7 @@
 commerce
 ========
 
-The Drupal Commerce module for DrupalGap. At this point the module is in a
-sandbox, so play at your own risk. ;)
+The Drupal Commerce module for DrupalGap.
 
 |==============|
 | Drupal Setup |
@@ -12,7 +11,7 @@ sandbox, so play at your own risk. ;)
    on your Drupal site:
 
      https://drupal.org/project/commerce_services
-     https://drupal.org/sandbox/signalpoint/2031039
+     https://drupal.org/project/commerce_drupalgap
 
 2. VERY IMPORTANT - After enabling the Commerce DrupalGap module on your site,
                     open up your Drupal Database (e.g. MySQL PHPMyAdmin) and
