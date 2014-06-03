@@ -1464,6 +1464,42 @@ function commerce_cart_button_update_click(order_id) {
   catch (error) { console.log('commerce_cart_button_update_click - ' + error); }
 }
 
+/**
+ * Completes the checkout process.
+ * @param {Object} options
+ */
+function commerce_checkout_complete(options) {
+  try {
+    options.method = 'POST';
+    options.contentType = 'application/x-www-form-urlencoded';
+    options.path = 'checkout_complete.json';
+    if (typeof options.flatten_fields !== 'undefined' && options.flatten_fields === false) {
+      options.path += '&flatten_fields=false';
+    }
+    options.service = 'checkout_complete';
+    options.resource = 'create';
+    // Since the service resource is expecting URL encoded data, change the data
+    // object into a string.
+    if (options.data) {
+      var data = '';
+      for (var property in options.data) {
+        if (options.data.hasOwnProperty(property)) {
+          data += property + '=' + options.data[property] + '&';
+        }
+      }
+      // Remove last ampersand.
+      if (data != '') {
+        data = data.substring(0, data.length - 1);
+        options.data = data;
+      }
+    }
+    Drupal.services.call(options);
+  }
+  catch (error) {
+    console.log('commerce_checkout_complete - ' + error);
+  }
+}
+
 /*********************************|
  *                                |
  * Commerce Theme Implementations |
