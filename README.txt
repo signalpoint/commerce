@@ -49,6 +49,8 @@ sandbox, so play at your own risk. ;)
        retrieve
        udpate
        delete
+     checkout_complete
+       create
 
 4. Go to admin/people/permissions and consider enabling these permissions for
    the roles mentioned:
