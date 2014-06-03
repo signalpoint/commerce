@@ -88,11 +88,6 @@ sandbox, so play at your own risk. ;)
 
      https://github.com/signalpoint/addressfield
 
-4. Update jDrupal to development snapshot in the www folder, and update the
-   index.html file to point to it.
-
-     http://www.easystreet3.com/jDrupal/download
-
 5. Optional, place the 'commerce_cart' block in a region on your theme in the
    settings.js file. Here are some recommended default values:
    
