@@ -91,6 +91,8 @@ The Drupal Commerce module for DrupalGap.
 
 5. Optional, place the 'commerce_cart' block in a region on your theme in the
    settings.js file. Here are some recommended default values:
+
+'''
    
      commerce_cart: {
        pages: {
@@ -99,3 +101,4 @@ The Drupal Commerce module for DrupalGap.
        }
      }
 
+'''
