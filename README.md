@@ -104,7 +104,9 @@ Repeat steps #2-3, but for the addressfield module:
 
 * https://github.com/signalpoint/addressfield
 
-Optional, place the `commerce_cart` block in a region on your theme in the
+# Commerce Cart Block
+
+(Optional) - Place the `commerce_cart` block in a region on your theme in the
 settings.js file. Here are some recommended default values:
 
 ```
