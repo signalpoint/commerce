@@ -8,7 +8,11 @@ The Drupal Commerce module for DrupalGap.
 To resolve it, you need to replace all (2) occurrences of `field_product_entities`
 in commerce.js with the machine name of your product reference field. Your
 machine name is available in Drupal under `Manage Fields` on your product
-content type(s).
+content type(s). For example:
+
+```
+admin/structure/types/manage/product/fields
+```
 
 # Drupal Setup
 
