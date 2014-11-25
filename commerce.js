@@ -296,9 +296,10 @@ function commerce_checkout_view(form, form_state, order_id) {
       title: 'State',
       type: 'select',
       options: {
+        'MI': 'Michigan',
         'TX': 'Texas'
       },
-      default_value: 'TX',
+      default_value: 'MI',
       required: true
     };
     form.elements['billing_postal_code'] = {
@@ -414,58 +415,13 @@ function commerce_checkout_view_validate(form, form_state) {
 function commerce_checkout_view_submit(form, form_state) {
   try {
     variable_set('commerce_checkout_form_state', form_state);
-    drupalgap_goto('checkout/shipping/' + form_state.values['order_id']);
+    var path = 'checkout/review/' + form_state.values['order_id'];
+    if (module_exists('commerce_shipping')) {
+      path = 'checkout/shipping/' + form_state.values['order_id'];
+    }
+    drupalgap_goto(path);
   }
   catch (error) { console.log('commerce_checkout_view_submit - ' + error); }
-}
-
-/**
- *
- */
-function commerce_checkout_shipping_view(form, form_state, order_id) {
-  try {
-
-    // @TODO - Need dynamic shipping info retrieval here.
-
-    // Order ID
-    form.elements['order_id'] = {
-      type: 'hidden',
-      default_value: order_id
-    };
-    
-    form.elements['commerce_shipping'] = {
-      title: 'Shipping Service',
-      type: 'radios',
-      options: {
-        1: 'Express shipping: 1 business day: $15.00',
-        2: 'Standard shipping: 3 - 5 business days: $8.00'
-      },
-      default_value: 1
-    };
-
-    // Buttons
-    form.elements['submit'] = {
-      type: 'submit',
-      value: 'Continue to next step'
-    };
-    form.buttons['cancel'] = drupalgap_form_cancel_button();
-    form.buttons['cancel'].title = 'Go back';
-
-    return form;
-
-  }
-  catch (error) { console.log('commerce_checkout_shipping_view - ' + error); }
-}
-
-/**
- *
- */
-function commerce_checkout_shipping_view_submit(form, form_state) {
-  try {
-    variable_set('commerce_checkout_shipping_form_state', form_state);
-    drupalgap_goto('checkout/review/' + form_state.values['order_id']);
-  }
-  catch (error) { console.log('commerce_checkout_shipping_view_submit - ' + error); }
 }
 
 /**
@@ -692,12 +648,26 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
 
     // @TODO - is this dynamic, or is it a static name chosen by the site builder?
     var product_entities_field_name = 'field_product_entities';
+    //dpm('commerce_cart_add_to_cart_form');
+    //dpm(product_display);
     
     // If there are any product entities...
     if (product_display[product_entities_field_name]) {
       
       //dpm('commerce_product field_info_instances');
       var field_info_instances = drupalgap_field_info_instances('commerce_product', product_display.type);
+      if (!field_info_instances) {
+        // Failed to load the instances, throw some informative warnings.
+        dpm('WARNING: commerce_cart_add_to_cart_form() - no field instances were located for ' + product_display.type + '');
+        /*field_info_instances = drupalgap_field_info_instances('commerce_product');
+        if (field_info_instances) {
+          dpm('The following instance(s) were located: ');
+          $.each(field_info_instances, function(field_name, field) {
+              dpm(field_name);
+          });
+        }*/
+        return;
+      }
       //dpm(field_info_instances);
       
       // For each field instance on this product, if it has cart
@@ -710,7 +680,7 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
           // @TODO - These fields need be rendered as markup.
           if (
             typeof field.commerce_cart_settings === 'undefined' ||
-            field.commerce_cart_settings.attribute_field != 1
+            typeof field.commerce_cart_settings.attribute_field === 'undefined'
           ) { return; }
           
           // Save this field name for later.
@@ -755,9 +725,21 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
                   } } } };
                   $.each(product_display[product_entities_field_name], function(product_id, product) {
                       if (!_commerce_product_display_product_id) { _commerce_product_display_product_id = product_id; }
-                      var value = parseInt(product[field_name]);
+                      // Depending on the field type, the value can be bundled
+                      // differently. For example, Commerce Kickstart uses
+                      // taxonomy term reference fields, which have a tid as the
+                      // value, whereas a List (text) field can have multiple
+                      // types of values, string, number, etc. So if an int
+                      // isn't extracted, just use the straight value.
+                      var value = product[field_name];
+                      var label = product[field_name];
+                      if (typeof product[field_name + '_taxonomy_term_name'] !== 'undefined') {
+                        value = parseInt(product[field_name])
+                        label = product[field_name + '_taxonomy_term_name'];
+                      }
                       if (typeof field_items[0].options[value] !== 'undefined') { return; }
-                      field_items[0].options[value] = product[field_name + '_taxonomy_term_name'];
+                      field_items[0].options[value] = label;
+                      console.log(JSON.stringify(field_items[0].options));
                   });
                   form.elements[field_name][product_display.language] = field_items;
 
@@ -865,6 +847,7 @@ function _commerce_product_display_get_current_product_id() {
     // Now figure out which product id is currently selected by iterating over
     // the the referenced product entities on the current product display.
     var product_id = null;
+    // @TODO - this field name is dynamic, we can't use a static string here!
     $.each(_commerce_product_display['field_product_entities'], function(pid, product) {
         var match = true;
         $.each(_commerce_product_attribute_field_names, function(index, field_name) {
