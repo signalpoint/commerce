@@ -26,13 +26,14 @@ var _commerce_product_display_product_id = null;
  * Implements hook_install().
  */
 function commerce_install() {
-  try {
-    var css_file_path =
-            drupalgap_get_path('module', 'commerce') + '/commerce.css';
-    drupalgap_add_css(css_file_path);
-  }
-  catch (error) {
-    console.log('commerce_install - ' + error);
+  drupalgap_add_css(drupalgap_get_path('module', 'commerce') + '/commerce.css');
+
+  // Init default settings if there aren't any.
+  if (typeof drupalgap.settings.commerce === 'undefined') {
+    drupalgap.settings.commerce = {
+      product_field_name: 'field_product',
+      product_entities_field_name: 'field_product_entities'
+    };
   }
 }
 
@@ -647,7 +648,7 @@ function commerce_cart_add_to_cart_form(form, form_state, product_display) {
     // type.
 
     // @TODO - is this dynamic, or is it a static name chosen by the site builder?
-    var product_entities_field_name = 'field_product_entities';
+    var product_entities_field_name = drupalgap.settings.commerce.product_entities_field_name;
     //dpm('commerce_cart_add_to_cart_form');
     //dpm(product_display);
     
@@ -840,15 +841,16 @@ function _commerce_product_display_get_current_product_id() {
     var selector = '#' + drupalgap_get_page_id() + ' select._commerce_cart_attribute';
     var attributes = { };
     $(selector).each(function(index, object) {
-        var field_name = $(object).attr('field_name')
+        var field_name = $(object).attr('field_name');
         var value = $(object).val();
+        if (value == 'null') { value =  null; } // Convert null string to null.
         attributes[field_name] = value;
     });
     // Now figure out which product id is currently selected by iterating over
     // the the referenced product entities on the current product display.
     var product_id = null;
     // @TODO - this field name is dynamic, we can't use a static string here!
-    $.each(_commerce_product_display['field_product_entities'], function(pid, product) {
+    $.each(_commerce_product_display[drupalgap.settings.commerce.product_entities_field_name], function(pid, product) {
         var match = true;
         $.each(_commerce_product_attribute_field_names, function(index, field_name) {
             if (product[field_name] != attributes[field_name]) {
