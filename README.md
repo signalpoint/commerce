@@ -69,11 +69,13 @@ the roles mentioned:
 - Anonymous User
  - View any product of any type
  - Create orders of any type
+ - Edit own orders of any type
 - Authenticated User
  - View own orders of any type
  - View own Order orders
  - View any product of any type
  - Create orders of any type
+ - Edit own orders of any type
 
 Step 5. Go to e.g. `admin/structure/types/manage/tops/display/drupalgap` and set your
 desired fields to be visible when viewing a product in DrupalGap. At minimum,
@@ -130,3 +132,12 @@ commerce_cart: {
 POST ?q=drupalgap/cart.json 401 (Unauthorized : Access to this operation not granted)
 ```
 In Drupal, go to `admin/people/permissions` and grant permissions for `Create orders of any type`
+
+```
+POST ?q=drupalgap/line-item.json 401 (Unauthorized : Access to this operation not granted)
+```
+Drupal commerce does not allow anonymous user's to edit their own orders, AFAIK.
+
+The `commerce_entity_access()` function and the boolean that checks for `$account->uid` won't allow anonymous users to edit their own orders even if you grant permission.
+
+Until this "bug" is addressed, all users of your app must be authenticated to be able to add an item to the cart.
