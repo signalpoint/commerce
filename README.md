@@ -7,17 +7,6 @@ The Drupal Commerce module for DrupalGap.
 
 I understand this module is quite popular, and is no longer working very well. I wrote it in 2014 as a demonstration for DrupalCon Austin, and hoped a client of mine would actually need it so development could continue. To this day, no client of mine has needed it, nor do I need it on any personal projects, so this project is no longer maintained. If someone wants to become a co-maintainer of this, please contact me, otherwise for any improvements to happen on this project people will need to [purchase some development time from me](https://easystreet3.com/purchase-time). Note, I will not provide any free estimates on how long it will take. Good luck, and happy coding! - Tyler Frankenstein
 
-## Known Issue
-
-**IMPORTANT**: To resolve it, you need to *replace* all (2) occurrences of `field_product_entities`
-in commerce.js with the machine name of your product reference field. Your
-machine name is available in Drupal under `Manage Fields` on your product
-content type(s). For example:
-
-```
-admin/structure/types/manage/product/fields
-```
-
 ## Drupal Setup
 
 Step 1. Download and enable the Commerce Services and the Commerce DrupalGap modules on your
@@ -25,6 +14,13 @@ Drupal site:
 
 * https://drupal.org/project/commerce_services
 * https://drupal.org/project/commerce_drupalgap
+
+Step 1a. Patch the commerce_services module in Drupal with these patches:
+
+- https://www.drupal.org/node/1979246
+- https://www.drupal.org/node/2024813
+- https://www.drupal.org/node/2402977
+- https://www.drupal.org/node/2475219
 
 Step 2. After enabling the Commerce DrupalGap module on your site, open up your Drupal
 Database (e.g. MySQL PHPMyAdmin) and verify the module weight for
@@ -72,10 +68,12 @@ the roles mentioned:
 
 - Anonymous User
  - View any product of any type
+ - Create orders of any type
 - Authenticated User
  - View own orders of any type
  - View own Order orders
  - View any product of any type
+ - Create orders of any type
 
 Step 5. Go to e.g. `admin/structure/types/manage/tops/display/drupalgap` and set your
 desired fields to be visible when viewing a product in DrupalGap. At minimum,
@@ -97,11 +95,15 @@ Step 2: Extract the module into the `www/app/modules` folder, so it lives here:
 
 * www/app/modules/commerce
 
-Step 3: Modify `settings.js` to include the commerce module:
+Step 3: Modify `settings.js` to include the commerce module and settings:
 
 ```
 /* Contrib Modules */
 Drupal.modules.contrib['commerce'] = {};
+drupalgap.settings.commerce = {
+  product_field_name: 'field_product',
+  product_entities_field_name: 'field_product_entities'
+};
 ```
 
 Repeat steps #2-3, but for the addressfield module:
@@ -121,3 +123,10 @@ commerce_cart: {
   }
 }
 ```
+
+## Troubleshoot
+
+```
+POST ?q=drupalgap/cart.json 401 (Unauthorized : Access to this operation not granted)
+```
+In Drupal, go to `admin/people/permissions` and grant permissions for `Create orders of any type`
