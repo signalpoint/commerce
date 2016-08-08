@@ -30,10 +30,7 @@ function commerce_install() {
 
   // Init default settings if there aren't any.
   if (typeof drupalgap.settings.commerce === 'undefined') {
-    drupalgap.settings.commerce = {
-      product_field_name: 'field_product',
-      product_entities_field_name: 'field_product_entities'
-    };
+    console.log('WARNING - drupalgap.settings.commerce is undefined, view the README file for commerce.js');
   }
 }
 
@@ -86,8 +83,8 @@ function commerce_services_postprocess(options, data) {
       if (data.commerce) { drupalgap.commerce = data.commerce; }
       else {
         console.log('commerce_services_postprocess - failed to extract ' +
-          ' commerce object from system connect. Is the commerce_drupalgap ' +
-          ' module enabled on your Drupal site?');
+            ' commerce object from system connect. Is the commerce_drupalgap ' +
+            ' module enabled on your Drupal site?');
       }
     }
   }
@@ -122,14 +119,14 @@ function commerce_block_view(delta) {
     var page_id = drupalgap_get_page_id();
     var cart_container_id = page_id + '_cart';
     content = '<div id="' + cart_container_id + '" class="commerce_cart"></div>' +
-      drupalgap_jqm_page_event_script_code({
+        drupalgap_jqm_page_event_script_code({
           page_id: page_id,
           jqm_page_event: 'pageshow',
           jqm_page_event_callback: '_commerce_block_view',
           jqm_page_event_args: JSON.stringify({
-              cart_container_id: cart_container_id
+            cart_container_id: cart_container_id
           })
-      });
+        });
   }
   return content;
 }
@@ -221,19 +218,19 @@ function commerce_cart_view() {
 function commerce_cart_view_pageshow() {
   try {
     commerce_cart_index(null, {
-        success: function(result) {
-          if (result.length != 0) {
-            $.each(result, function(order_id, order) {
-                // Set aside the order so it can be used later without fetching
-                // it again.
-                _commerce_order[order_id] = order;
-                // Theme the cart and render it on the page.
-                var html = theme('commerce_cart', { order: order });
-                $('#commerce_cart').html(html).trigger('create');            
-                return false; // Process only one cart.
-            });
-          }
+      success: function(result) {
+        if (result.length != 0) {
+          $.each(result, function(order_id, order) {
+            // Set aside the order so it can be used later without fetching
+            // it again.
+            _commerce_order[order_id] = order;
+            // Theme the cart and render it on the page.
+            var html = theme('commerce_cart', { order: order });
+            $('#commerce_cart').html(html).trigger('create');
+            return false; // Process only one cart.
+          });
         }
+      }
     });
   }
   catch (error) { console.log('commerce_cart_view_pageshow - ' + error); }
@@ -247,16 +244,16 @@ function commerce_checkout_view(form, form_state, order_id) {
     // @NOTE - when testing, if you sent the app's front page to the checkout
     // page, the drupalgap.commerce object may not be available yet. It's better
     // to set the front page to the cart page instead.
-    //dpm(drupalgap.commerce);
-    
+
     // @TODO - Need dynamic checkout pane retrieval here.
-    
+    // @TODO - utilize the new addressfield form element available in addressfield.js
+
     // Order ID
     form.elements['order_id'] = {
       type: 'hidden',
       default_value: order_id
     };
-    
+
     // Billing Information
     form.elements['billing_information'] = {
       title: 'Billing Information',
@@ -308,7 +305,7 @@ function commerce_checkout_view(form, form_state, order_id) {
       title: 'Zip',
       required: true
     };
-    
+
     // Shipping Information
     form.elements['shipping_information'] = {
       title: 'Shipping Information',
@@ -369,7 +366,7 @@ function commerce_checkout_view(form, form_state, order_id) {
       title: 'Zip',
       required: true
     };
-    
+
     // Buttons
     form.elements['submit'] = {
       type: 'submit',
@@ -402,8 +399,8 @@ function commerce_checkout_view_validate(form, form_state) {
     if (form_state.values['customer_profile_copy']) {
       var names = commerce_checkout_shipping_element_names();
       $.each(names, function(index, name) {
-          var _name = name.replace('shipping', 'billing');
-          form_state.values[name] = form_state.values[_name];
+        var _name = name.replace('shipping', 'billing');
+        form_state.values[name] = form_state.values[_name];
       });
     }
   }
@@ -436,16 +433,16 @@ function commerce_checkout_review_order_view(form, form_state, order_id) {
       type: 'hidden',
       default_value: order_id
     };
-    
+
     // Grab the checkout form state.
     var checkout_info = JSON.parse(variable_get('commerce_checkout_form_state', {}));
-    
+
     // Cart Review Placeholder
     form.elements['cart_placeholder'] = {
       title: 'Review Order',
       markup: '<div id="' + commerce_checkout_review_cart_container_id(order_id) + '"></div>'
     };
-    
+
     // Account Information
     var markup = '<p><strong>Username</strong><br />' + Drupal.user.name + '</p>';
     markup += '<p><strong>E-mail address</strong><br />' + Drupal.user.mail + '</p>';
@@ -453,27 +450,27 @@ function commerce_checkout_review_order_view(form, form_state, order_id) {
       title: 'Account Information',
       markup: markup
     };
-    
+
     // Billing Information
     var variables = {};
     var names = commerce_checkout_billing_element_names();
     $.each(names, function(index, name) {
-        if (typeof checkout_info.values[name] !== 'undefined') {
-          variables[name.replace('billing_', '')] = checkout_info.values[name];
-        }
+      if (typeof checkout_info.values[name] !== 'undefined') {
+        variables[name.replace('billing_', '')] = checkout_info.values[name];
+      }
     });
     form.elements['billing_information'] = {
       title: 'Billing Information',
       markup: theme('addressfield', variables)
     };
-    
+
     // Shipping Information
     var variables = {};
     var names = commerce_checkout_shipping_element_names();
     $.each(names, function(index, name) {
-        if (typeof checkout_info.values[name] !== 'undefined') {
-          variables[name.replace('shipping_', '')] = checkout_info.values[name];
-        }
+      if (typeof checkout_info.values[name] !== 'undefined') {
+        variables[name.replace('shipping_', '')] = checkout_info.values[name];
+      }
     });
     form.elements['shipping_information'] = {
       title: 'Shipping Information',
@@ -501,26 +498,26 @@ function commerce_checkout_review_order_view_pageshow(form_id, order_id) {
   try {
     var container_id = commerce_checkout_review_cart_container_id(order_id);
     commerce_order_load(order_id, {
-        success: function(order) {
-          try {
-            var html = '';
-            // Render each line item.
-            var items = [];
-            $.each(order.commerce_line_items_entities, function(line_item_id, line_item) {
-                var item = theme('commerce_cart_line_item_review', {
-                  line_item: line_item,
-                  order: order
-                });
-                items.push(item);
+      success: function(order) {
+        try {
+          var html = '';
+          // Render each line item.
+          var items = [];
+          $.each(order.commerce_line_items_entities, function(line_item_id, line_item) {
+            var item = theme('commerce_cart_line_item_review', {
+              line_item: line_item,
+              order: order
             });
-            html += theme('jqm_item_list', { items: items });
-            
-            // Render the order total, then inject the html into the container.
-            html += theme('commerce_cart_total', { order: order });
-            $('#' + container_id).html(html).trigger('create');
-          }
-          catch (error) { console.log('commerce_checkout_review_order_view_pageshow - success - ' + error); }
+            items.push(item);
+          });
+          html += theme('jqm_item_list', { items: items });
+
+          // Render the order total, then inject the html into the container.
+          html += theme('commerce_cart_total', { order: order });
+          $('#' + container_id).html(html).trigger('create');
         }
+        catch (error) { console.log('commerce_checkout_review_order_view_pageshow - success - ' + error); }
+      }
     });
   }
   catch (error) { console.log('commerce_checkout_review_order_view_pageshow - ' + error); }
@@ -572,7 +569,7 @@ function commerce_checkout_billing_element_names() {
     var names = commerce_checkout_element_names();
     var shipping_names = [];
     $.each(names, function(index, name) {
-        shipping_names.push('billing_' + name)
+      shipping_names.push('billing_' + name)
     });
     return shipping_names;
   }
@@ -587,7 +584,7 @@ function commerce_checkout_shipping_element_names() {
     var names = commerce_checkout_element_names();
     var shipping_names = [];
     $.each(names, function(index, name) {
-        shipping_names.push('shipping_' + name)
+      shipping_names.push('shipping_' + name)
     });
     return shipping_names;
   }
@@ -613,9 +610,9 @@ function commerce_checkout_customer_profile_copy_toggle() {
     // Hide the shipping input fields.
     var names = commerce_checkout_shipping_element_names();
     $.each(names, function(index, name) {
-        var selector = '.' + drupalgap_form_get_element_container_class(name).replace('form-item ', '');
-        if (!checked) { $(selector).show(); }
-        else { $(selector).hide(); }
+      var selector = '.' + drupalgap_form_get_element_container_class(name).replace('form-item ', '');
+      if (!checked) { $(selector).show(); }
+      else { $(selector).hide(); }
     });
   }
   catch (error) { console.log('commerce_checkout_customer_profile_copy_toggle - ' + error); }
@@ -626,142 +623,140 @@ function commerce_checkout_customer_profile_copy_toggle() {
  */
 function commerce_cart_add_to_cart_form(form, form_state, product_display) {
   try {
-    //dpm('commerce_cart_add_to_cart_form');
-    //dpm(product_display);
-    
+    //console.log('commerce_cart_add_to_cart_form');
+    //console.log(product_display);
+
     // Set the global product display variable so we have access to it later.
     _commerce_product_display = product_display;
-    
+
     // Prep array to hold attribute field names.
     _commerce_product_attribute_field_names = [];
-    
+
     // Clear the referenced product id.
     _commerce_product_display_product_id = null;
-    
+
     // Set the form entity type and bundle.
     form.entity_type = 'commerce_product';
     form.bundle = product_display.type;
-    
+
     // Determine the internal commerce field name for the product
     // display's entity reference(s). Note, this is not the same field
     // name used by the Product reference field on the node content
     // type.
 
-    // @TODO - is this dynamic, or is it a static name chosen by the site builder?
-    var product_entities_field_name = drupalgap.settings.commerce.product_entities_field_name;
-    //dpm('commerce_cart_add_to_cart_form');
-    //dpm(product_display);
-    
+    var product_entities_field_name = commerce_get_content_type_product_reference_entities_field_name(product_display.type);
+
     // If there are any product entities...
     if (product_display[product_entities_field_name]) {
-      
-      //dpm('commerce_product field_info_instances');
-      var field_info_instances = drupalgap_field_info_instances('commerce_product', product_display.type);
+
+      //console.log('commerce_product field_info_instances');
+      //console.log(drupalgap.field_info_instances);
+
+      // Locate the first product referenced product's type and use it for the field_info_instances.
+      var product_type = null;
+      $.each(product_display[product_entities_field_name], function(pid, product) {
+        product_type = product.type;
+        return false;
+      });
+
+      var field_info_instances = drupalgap_field_info_instances('commerce_product', product_type);
       if (!field_info_instances) {
         // Failed to load the instances, throw some informative warnings.
-        dpm('WARNING: commerce_cart_add_to_cart_form() - no field instances were located for ' + product_display.type + '');
-        /*field_info_instances = drupalgap_field_info_instances('commerce_product');
-        if (field_info_instances) {
-          dpm('The following instance(s) were located: ');
-          $.each(field_info_instances, function(field_name, field) {
-              dpm(field_name);
-          });
-        }*/
+        console.log('WARNING: commerce_cart_add_to_cart_form() - no field instances were located for ' + product_type + '');
         return;
       }
-      //dpm(field_info_instances);
-      
+
       // For each field instance on this product, if it has cart
       // settings, and is an attributed field, iterate over each product
       // and extract the form element items required to build the
       // widget.
       $.each(field_info_instances, function(field_name, field) {
 
-          // Skip fields that aren't part of the cart (e.g. price, images).
-          // @TODO - These fields need be rendered as markup.
-          if (
+        // Skip fields that aren't part of the cart (e.g. price, images).
+        // @TODO - These fields need be rendered as markup.
+        if (
             typeof field.commerce_cart_settings === 'undefined' ||
             typeof field.commerce_cart_settings.attribute_field === 'undefined'
-          ) { return; }
-          
-          // Save this field name for later.
-          _commerce_product_attribute_field_names.push(field_name);
+        ) { return; }
 
-          // What widget module and widget type are being used on this
-          // field?
-          var module = field.widget.module;
-          var type = field.widget.type;
+        // Save this field name for later.
+        _commerce_product_attribute_field_names.push(field_name);
 
-          // Depending on the module, let's handle the widget type.
-          //dpm(field_name);
-          //dpm(field);
-          switch (module) {
-            
-            // Handle options.
-            case 'options':
-              switch (type) {
-                
-                // Handle select options.
-                case 'options_select':
-                  
-                  // Since this is a field, we need to bundle it into the
-                  // the language code as an item.
-                  form.elements[field_name] = {
-                    title: field.label,
-                    type: 'select',
-                    required: field.required,
-                    default_value: 1
-                  };
-                  
-                  // Build the field items (only one), then go over each product,
-                  // extracting the options for this field, skipping any that are
-                  // already set. Then attach an onchange handler and attach the
-                  // field items to the element. Save a reference to the first
-                  // product id, in case the user adds the default product to
-                  // the cart.
-                  var field_items = { 0: { options: { attributes: {
-                    onchange: '_commerce_cart_attribute_change()',
-                    'class': '_commerce_cart_attribute',
-                    field_name: field_name
-                  } } } };
-                  $.each(product_display[product_entities_field_name], function(product_id, product) {
-                      if (!_commerce_product_display_product_id) { _commerce_product_display_product_id = product_id; }
-                      // Depending on the field type, the value can be bundled
-                      // differently. For example, Commerce Kickstart uses
-                      // taxonomy term reference fields, which have a tid as the
-                      // value, whereas a List (text) field can have multiple
-                      // types of values, string, number, etc. So if an int
-                      // isn't extracted, just use the straight value.
-                      var value = product[field_name];
-                      var label = product[field_name];
-                      if (typeof product[field_name + '_taxonomy_term_name'] !== 'undefined') {
-                        value = parseInt(product[field_name])
-                        label = product[field_name + '_taxonomy_term_name'];
-                      }
-                      if (typeof field_items[0].options[value] !== 'undefined') { return; }
-                      field_items[0].options[value] = label;
-                      console.log(JSON.stringify(field_items[0].options));
-                  });
-                  form.elements[field_name][product_display.language] = field_items;
+        // What widget module and widget type are being used on this
+        // field?
+        var module = field.widget.module;
+        var type = field.widget.type;
 
-                  break;
+        // Depending on the module, let's handle the widget type.
+        //dpm(field_name);
+        //dpm(field);
+        switch (module) {
 
-                default:
-                  console.log('WARNING: commerce_cart_add_to_cart_form - unsupported type (' + type + ')');
-                  break;
+          // Handle options.
+          case 'options':
+            switch (type) {
 
-              }                      
-              break;
+              // Handle select options.
+              case 'options_select':
 
-            default:
-              console.log('WARNING: commerce_cart_add_to_cart_form - unsupported module (' + module + ')');
-              break;
-          }
-          
+                // Since this is a field, we need to bundle it into the
+                // the language code as an item.
+                form.elements[field_name] = {
+                  title: field.label,
+                  type: 'select',
+                  required: field.required,
+                  default_value: 1
+                };
+
+                // Build the field items (only one), then go over each product,
+                // extracting the options for this field, skipping any that are
+                // already set. Then attach an onchange handler and attach the
+                // field items to the element. Save a reference to the first
+                // product id, in case the user adds the default product to
+                // the cart.
+                var field_items = { 0: { options: { attributes: {
+                  onchange: '_commerce_cart_attribute_change()',
+                  'class': '_commerce_cart_attribute',
+                  field_name: field_name
+                } } } };
+                $.each(product_display[product_entities_field_name], function(product_id, product) {
+                  if (!_commerce_product_display_product_id) { _commerce_product_display_product_id = product_id; }
+                  // Depending on the field type, the value can be bundled
+                  // differently. For example, Commerce Kickstart uses
+                  // taxonomy term reference fields, which have a tid as the
+                  // value, whereas a List (text) field can have multiple
+                  // types of values, string, number, etc. So if an int
+                  // isn't extracted, just use the straight value.
+                  var value = product[field_name];
+                  var label = product[field_name];
+                  if (typeof product[field_name + '_taxonomy_term_name'] !== 'undefined') {
+                    value = parseInt(product[field_name])
+                    label = product[field_name + '_taxonomy_term_name'];
+                  }
+                  if (typeof field_items[0].options[value] !== 'undefined') { return; }
+                  field_items[0].options[value] = label;
+                  console.log(JSON.stringify(field_items[0].options));
+                });
+                form.elements[field_name][product_display.language] = field_items;
+
+                break;
+
+              default:
+                console.log('WARNING: commerce_cart_add_to_cart_form - unsupported type (' + type + ')');
+                break;
+
+            }
+            break;
+
+          default:
+            console.log('WARNING: commerce_cart_add_to_cart_form - unsupported module (' + module + ')');
+            break;
+        }
+
       });
-      
+
     }
-    
+
     // Add to cart submit button.
     form.elements.submit = {
       type: 'submit',
@@ -779,31 +774,31 @@ function commerce_cart_add_to_cart_form_submit(form, form_state) {
   try {
     // Get the user's current cart.
     commerce_cart_index(null, {
-        success: function(result) {
-          //dpm('commerce_cart_index');
-          //dpm(result);
-          if (result.length == 0) {
-            // The cart doesn't exist yet, create it, then add the line item to it.
-            commerce_cart_create({
-                success: function(order) {
-                  _commerce_line_item_add_to_order({
-                      order: order,
-                      success: _commerce_cart_add_to_cart_form_submit_success
-                  });
-                }
-            });
-          }
-          else {
-            // The cart already exists, add the line item to it.
-            $.each(result, function(order_id, order) {
+      success: function(result) {
+        //dpm('commerce_cart_index');
+        //dpm(result);
+        if (result.length == 0) {
+          // The cart doesn't exist yet, create it, then add the line item to it.
+          commerce_cart_create({
+            success: function(order) {
               _commerce_line_item_add_to_order({
-                  order: order,
-                  success: _commerce_cart_add_to_cart_form_submit_success
+                order: order,
+                success: _commerce_cart_add_to_cart_form_submit_success
               });
-              return false; // Process only one cart.
-            });
-          }
+            }
+          });
         }
+        else {
+          // The cart already exists, add the line item to it.
+          $.each(result, function(order_id, order) {
+            _commerce_line_item_add_to_order({
+              order: order,
+              success: _commerce_cart_add_to_cart_form_submit_success
+            });
+            return false; // Process only one cart.
+          });
+        }
+      }
     });
   }
   catch (error) { console.log('commerce_cart_add_to_cart_form_submit - ' + error); }
@@ -841,27 +836,28 @@ function _commerce_product_display_get_current_product_id() {
     var selector = '#' + drupalgap_get_page_id() + ' select._commerce_cart_attribute';
     var attributes = { };
     $(selector).each(function(index, object) {
-        var field_name = $(object).attr('field_name');
-        var value = $(object).val();
-        if (value == 'null') { value =  null; } // Convert null string to null.
-        attributes[field_name] = value;
+      var field_name = $(object).attr('field_name');
+      var value = $(object).val();
+      if (value == 'null') { value =  null; } // Convert null string to null.
+      attributes[field_name] = value;
     });
     // Now figure out which product id is currently selected by iterating over
     // the the referenced product entities on the current product display.
     var product_id = null;
-    // @TODO - this field name is dynamic, we can't use a static string here!
-    $.each(_commerce_product_display[drupalgap.settings.commerce.product_entities_field_name], function(pid, product) {
-        var match = true;
-        $.each(_commerce_product_attribute_field_names, function(index, field_name) {
-            if (product[field_name] != attributes[field_name]) {
-              match = false;
-              return false;
-            }
-        });
-        if (match) {
-          product_id = pid;
+    //console.log(_commerce_product_display);
+    var product_entities_field_name = commerce_get_content_type_product_reference_entities_field_name(_commerce_product_display.type);
+    $.each(_commerce_product_display[product_entities_field_name], function(pid, product) {
+      var match = true;
+      $.each(_commerce_product_attribute_field_names, function(index, field_name) {
+        if (product[field_name] != attributes[field_name]) {
+          match = false;
           return false;
         }
+      });
+      if (match) {
+        product_id = pid;
+        return false;
+      }
     });
     return product_id;
   }
@@ -879,16 +875,16 @@ function _commerce_line_item_add_to_order(options) {
       return;
     }
     commerce_line_item_create({
-        data: {
-          order_id: options.order.order_id,
-          type: 'product',
-          commerce_product: product_id
-        },
-        success: function(result) {
-          //dpm('commerce_line_item_create');
-          //dpm(result);
-          if (options.success) { options.success(result); }
-        }
+      data: {
+        order_id: options.order.order_id,
+        type: 'product',
+        commerce_product: product_id
+      },
+      success: function(result) {
+        //dpm('commerce_line_item_create');
+        //dpm(result);
+        if (options.success) { options.success(result); }
+      }
     });
   }
   catch (error) { console.log('_commerce_line_item_add_to_order - ' + error); }
@@ -919,26 +915,26 @@ function commerce_product_reference_node_types() {
  * Implements hook_field_formatter_view().
  */
 function commerce_cart_field_formatter_view(entity_type, entity, field,
-  instance, langcode, items, display
+                                            instance, langcode, items, display
 ) {
   try {
     var element = {};
     if (!empty(items)) {
-      
+
       // Generate markup that will place an empty div placeholder and pageshow
       // handler that will dynamically inject the cart into the page.
-      var markup = 
-        '<div id="' + commerce_cart_container_id(entity_type, entity.nid) + '"></div>' +
-        drupalgap_jqm_page_event_script_code({
+      var markup =
+          '<div id="' + commerce_cart_container_id(entity_type, entity.nid) + '"></div>' +
+          drupalgap_jqm_page_event_script_code({
             page_id: drupalgap_get_page_id(),
             jqm_page_event: 'pageshow',
             jqm_page_event_callback:
-              '_commerce_cart_field_formatter_view_pageshow',
+                '_commerce_cart_field_formatter_view_pageshow',
             jqm_page_event_args: JSON.stringify({
-                entity_type: entity_type,
-                entity_id: entity.nid
+              entity_type: entity_type,
+              entity_id: entity.nid
             })
-        });
+          });
 
       // Place the markup on delta zero of the element.
       element[0] = {
@@ -961,11 +957,11 @@ function _commerce_cart_field_formatter_view_pageshow(options) {
     var entity_id = options.entity_id;
     // Load the product display.
     commerce_product_display_load(entity_id, {
-        success: function(product_display) {
-          // Inject the add to cart form html into the container.
-          var form_html = drupalgap_get_form('commerce_cart_add_to_cart_form', product_display);
-          $('#' + commerce_cart_container_id(entity_type, entity_id)).html(form_html).trigger('create');
-        }
+      success: function(product_display) {
+        // Inject the add to cart form html into the container.
+        var form_html = drupalgap_get_form('commerce_cart_add_to_cart_form', product_display);
+        $('#' + commerce_cart_container_id(entity_type, entity_id)).html(form_html).trigger('create');
+      }
     });
   }
   catch (error) {
@@ -988,7 +984,7 @@ function commerce_cart_container_id(entity_type, entity_id) {
  * Implements hook_field_formatter_view().
  */
 function commerce_price_field_formatter_view(entity_type, entity, field,
-  instance, langcode, items, display
+                                             instance, langcode, items, display
 ) {
   try {
     var element = {};
@@ -1062,33 +1058,33 @@ function commerce_services_preprocess(options) {
       case 'commerce_line_item':
         if (options.resource == 'update' || options.resource == 'delete') {
           options.path = options.path.replace(
-            'commerce_line_item',
-            'line-item'
-          );  
+              'commerce_line_item',
+              'line-item'
+          );
         }
         break;
       case 'commerce_order':
         if (options.resource == 'retrieve' || options.resource == 'update') {
           options.path = options.path.replace(
-            'commerce_order',
-            'order'
-          );  
+              'commerce_order',
+              'order'
+          );
         }
         break;
       case 'commerce_product_display':
         if (options.resource == 'retrieve') {
           options.path = options.path.replace(
-            'commerce_product_display',
-            'product-display'
-          );  
+              'commerce_product_display',
+              'product-display'
+          );
         }
         break;
       case 'commerce_product':
         if (options.resource == 'retrieve') {
           options.path = options.path.replace(
-            'commerce_product',
-            'product'
-          );  
+              'commerce_product',
+              'product'
+          );
         }
         break;
     }
@@ -1212,26 +1208,26 @@ function commerce_order_update(order, options) {
     order.order_id = parseInt(order.order_id);
     var path = 'commerce_order/' + order.order_id + '.json' /* &flatten_fields=false */;
     Drupal.services.call({
-        method: 'PUT',
-        path: path,
-        service: 'commerce_order',
-        resource: 'update',
-        entity_type: 'commerce_order',
-        entity_id: order.order_id,
-        bundle: null,
-        data: JSON.stringify(order),
-        success: function(data) {
-          try {
-            if (options.success) { options.success(data); }
-          }
-          catch (error) { console.log('commerce_order_update - success - ' + error); }
-        },
-        error: function(xhr, status, message) {
-          try {
-            if (options.error) { options.error(xhr, status, message); }
-          }
-          catch (error) { console.log('commerce_order_update - error - ' + error); }
+      method: 'PUT',
+      path: path,
+      service: 'commerce_order',
+      resource: 'update',
+      entity_type: 'commerce_order',
+      entity_id: order.order_id,
+      bundle: null,
+      data: JSON.stringify(order),
+      success: function(data) {
+        try {
+          if (options.success) { options.success(data); }
         }
+        catch (error) { console.log('commerce_order_update - success - ' + error); }
+      },
+      error: function(xhr, status, message) {
+        try {
+          if (options.error) { options.error(xhr, status, message); }
+        }
+        catch (error) { console.log('commerce_order_update - error - ' + error); }
+      }
     });
   }
   catch (error) { console.log('commerce_order_update - ' + error); }
@@ -1265,10 +1261,10 @@ function commerce_product_retrieve(ids, options) {
 }
 
 /**
-* Perform a product index.
-* @param {Object} query
-* @param {Object} options
-*/
+ * Perform a product index.
+ * @param {Object} query
+ * @param {Object} options
+ */
 function commerce_product_index(query, options) {
   try {
     // @TODO - we can't use jDrupal's entity_index API since the name of the
@@ -1283,21 +1279,21 @@ function commerce_product_index(query, options) {
     if (query.filter) {
       var filters = '';
       for (var filter in query.filter) {
-          if (query.filter.hasOwnProperty(filter)) {
-            var key = encodeURIComponent(filter);
-            var value = query.filter[filter];
-            // If the value is an array, each index needs to be placed into the
-            // query string. Otherwise, just place the key value in the query
-            // string.
-            if ($.isArray(value)) {
-              $.each(value, function(i, v) {
-                  filters += key + '[' + i + ']=' + v + '&';
-              });
-            }
-            else {
-              filters += 'filter[' + key + ']=' + value + '&';
-            }
+        if (query.filter.hasOwnProperty(filter)) {
+          var key = encodeURIComponent(filter);
+          var value = query.filter[filter];
+          // If the value is an array, each index needs to be placed into the
+          // query string. Otherwise, just place the key value in the query
+          // string.
+          if ($.isArray(value)) {
+            $.each(value, function(i, v) {
+              filters += key + '[' + i + ']=' + v + '&';
+            });
           }
+          else {
+            filters += 'filter[' + key + ']=' + value + '&';
+          }
+        }
       }
       if (filters != '') {
         filters = filters.substring(0, filters.length - 1);
@@ -1307,11 +1303,11 @@ function commerce_product_index(query, options) {
     if (query.filter_op) {
       var filter_ops = '';
       for (var filter in query.filter_op) {
-          if (query.filter_op.hasOwnProperty(filter)) {
-            var key = encodeURIComponent(filter);
-            var value = encodeURIComponent(query.filter_op[filter]);
-            filter_ops += 'filter_op[' + key + ']=' + value + '&';
-          }
+        if (query.filter_op.hasOwnProperty(filter)) {
+          var key = encodeURIComponent(filter);
+          var value = encodeURIComponent(query.filter_op[filter]);
+          filter_ops += 'filter_op[' + key + ']=' + value + '&';
+        }
       }
       if (filter_ops != '') {
         filter_ops = filter_ops.substring(0, filter_ops.length - 1);
@@ -1406,13 +1402,13 @@ function commerce_product_load(ids, options) {
 function _commerce_cart_line_item_remove(order_id, line_item_id) {
   try {
     commerce_line_item_delete(line_item_id, {
-        success: function(result) {
-          // @TODO - once DG core supports reloading the same page, we can just
-          // make a call to drupalgap_goto(). Just re-run the pageshow event
-          // handler.
-          //drupalgap_goto('cart', { reloadPage: true });
-          commerce_cart_view_pageshow();
-        }
+      success: function(result) {
+        // @TODO - once DG core supports reloading the same page, we can just
+        // make a call to drupalgap_goto(). Just re-run the pageshow event
+        // handler.
+        //drupalgap_goto('cart', { reloadPage: true });
+        commerce_cart_view_pageshow();
+      }
     });
   }
   catch (error) { console.log('_commerce_cart_line_item_remove - ' + error); }
@@ -1429,20 +1425,20 @@ function commerce_cart_button_update_click(order_id) {
     // server calls, and multiple cart rebuilds on success.
     var order = _commerce_order[order_id];
     $.each(order.commerce_line_items_entities, function(line_item_id, line_item) {
-        var quantity = $('#commerce_cart_line_item_quantity_' + line_item_id).val() + '.00';
-        var _quantity = order.commerce_line_items_entities[line_item_id].quantity;
-        if (quantity != _quantity) {
-          var line_item = {
-            line_item_id: parseInt(line_item_id),
-            quantity: quantity
-          };
-          commerce_line_item_save(line_item, {
-              quantity: quantity,
-              success: function(result) {
-                commerce_cart_view_pageshow();
-              }
-          });
-        }
+      var quantity = $('#commerce_cart_line_item_quantity_' + line_item_id).val() + '.00';
+      var _quantity = order.commerce_line_items_entities[line_item_id].quantity;
+      if (quantity != _quantity) {
+        var line_item = {
+          line_item_id: parseInt(line_item_id),
+          quantity: quantity
+        };
+        commerce_line_item_save(line_item, {
+          quantity: quantity,
+          success: function(result) {
+            commerce_cart_view_pageshow();
+          }
+        });
+      }
     });
   }
   catch (error) { console.log('commerce_cart_button_update_click - ' + error); }
@@ -1503,23 +1499,23 @@ function theme_commerce_cart(variables) {
     if (variables.order.commerce_line_items) {
       item_count = variables.order.commerce_line_items.length;
     }
-    if (item_count == 0) { return 'Your shopping cart is empty.'; }    
-    
+    if (item_count == 0) { return 'Your shopping cart is empty.'; }
+
     // Render each line item.
     var items = [];
     $.each(variables.order.commerce_line_items_entities, function(line_item_id, line_item) {
-        var item = theme('commerce_cart_line_item', {
-          line_item: line_item,
-          order: variables.order
-        });
-        items.push(item);
+      var item = theme('commerce_cart_line_item', {
+        line_item: line_item,
+        order: variables.order
+      });
+      items.push(item);
     });
     html += theme('jqm_item_list', { items: items });
-    
+
     // Render the order total and the buttons.
     html += theme('commerce_cart_total', { order: variables.order }) +
-      theme('commerce_cart_buttons', { order: variables.order });
-      
+        theme('commerce_cart_buttons', { order: variables.order });
+
     // Return the rendered cart.
     return html;
   }
@@ -1538,7 +1534,7 @@ function theme_commerce_cart_block(variables) {
     }
     if (item_count > 0) {
       var link_text = variables.order.commerce_order_total_formatted +
-        ' (' + item_count + ' ' + drupalgap_format_plural(item_count, 'item', 'items') + ')';
+          ' (' + item_count + ' ' + drupalgap_format_plural(item_count, 'item', 'items') + ')';
       var link = l(link_text, 'cart', { reloadPage: true });
       html += theme('jqm_item_list', { items: [link] });
     }
@@ -1553,26 +1549,26 @@ function theme_commerce_cart_block(variables) {
 function theme_commerce_cart_buttons(variables) {
   try {
     var html =
-      theme('button_link', {
-        text: 'Update cart',
-        path: null,
-        options: {
-          attributes: {
-            'data-icon': 'refresh',
-            onclick: 'commerce_cart_button_update_click(' + variables.order.order_id + ')'
+        theme('button_link', {
+          text: 'Update cart',
+          path: null,
+          options: {
+            attributes: {
+              'data-icon': 'refresh',
+              onclick: 'commerce_cart_button_update_click(' + variables.order.order_id + ')'
+            }
           }
-        }
-      }) +
-      theme('button_link', {
-        text: 'Checkout',
-        path: 'checkout/' + variables.order.order_id,
-        options: {
-          attributes: {
-            'data-icon': 'check',
-            'data-theme': 'b'
+        }) +
+        theme('button_link', {
+          text: 'Checkout',
+          path: 'checkout/' + variables.order.order_id,
+          options: {
+            attributes: {
+              'data-icon': 'check',
+              'data-theme': 'b'
+            }
           }
-        }
-      });
+        });
     return html;
   }
   catch (error) { console.log('theme_commerce_cart_buttons - ' + error); }
@@ -1584,20 +1580,20 @@ function theme_commerce_cart_buttons(variables) {
 function theme_commerce_cart_line_item(variables) {
   try {
     var html = '<h2>' + variables.line_item.line_item_label + '</h2>' +
-    '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>';
+        '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>';
     if (variables.line_item.type != 'shipping') {
       html += theme('commerce_cart_line_item_quantity', {
-        line_item: variables.line_item,
-        order: variables.order
-      }) +
-      theme('commerce_cart_line_item_remove', {
-          line_item: variables.line_item,
-          order: variables.order
-      });
+            line_item: variables.line_item,
+            order: variables.order
+          }) +
+          theme('commerce_cart_line_item_remove', {
+            line_item: variables.line_item,
+            order: variables.order
+          });
     }
     html += '<p class="ui-li-aside"><strong>Total</strong>: ' +
-      variables.line_item.commerce_total_formatted +
-    '</p>';
+        variables.line_item.commerce_total_formatted +
+        '</p>';
     return html;
   }
   catch (error) { console.log('theme_commerce_cart_line_item - ' + error); }
@@ -1611,10 +1607,10 @@ function theme_commerce_cart_line_item_review(variables) {
     var quantity = Math.floor(variables.line_item.quantity);
     var label = variables.line_item.line_item_label;
     var html = '<h2>' + quantity + ' x ' + label  + '</h2>' +
-    '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>';
+        '<p><strong>Price</strong>: ' + variables.line_item.commerce_unit_price_formatted + '</p>';
     html += '<p class="ui-li-aside"><strong>Total</strong>: ' +
-      variables.line_item.commerce_total_formatted +
-    '</p>';
+        variables.line_item.commerce_total_formatted +
+        '</p>';
     return html;
   }
   catch (error) { console.log('theme_commerce_cart_line_item_review - ' + error); }
@@ -1632,7 +1628,7 @@ function theme_commerce_cart_line_item_quantity(variables) {
       value: Math.floor(variables.line_item.quantity),
       line_item_id: variables.line_item.line_item_id,
       min: '1',
-      step: '1' 
+      step: '1'
     };
     var input = '<input ' +  drupalgap_attributes(attributes) + ' />';
     var html = '<label for="' + id + '">Quantity</label>' + input + '';
@@ -1647,12 +1643,12 @@ function theme_commerce_cart_line_item_quantity(variables) {
 function theme_commerce_cart_line_item_remove(variables) {
   try {
     var html = '<p>' +
-      l('Remove', null, {
-        attributes: {
-          onclick: '_commerce_cart_line_item_remove(' + variables.order.order_id + ', ' + variables.line_item.line_item_id + ')'
-        }
-    }) +
-    '</p>';
+        l('Remove', null, {
+          attributes: {
+            onclick: '_commerce_cart_line_item_remove(' + variables.order.order_id + ', ' + variables.line_item.line_item_id + ')'
+          }
+        }) +
+        '</p>';
     return html;
   }
   catch (error) { console.log('theme_commerce_cart_line_item - ' + error); }
@@ -1664,9 +1660,20 @@ function theme_commerce_cart_line_item_remove(variables) {
 function theme_commerce_cart_total(variables) {
   try {
     return '<h3 class="ui-bar ui-bar-a ui-corner-all">Order Total: ' +
-      variables.order.commerce_order_total_formatted +
-    '</h3>';
+        variables.order.commerce_order_total_formatted +
+        '</h3>';
   }
   catch (error) { console.log('theme_commerce_cart_total - ' + error); }
 }
 
+/**
+ * HELPERS
+ */
+
+function commerce_get_content_type_product_reference_field_name(type) {
+  return drupalgap.settings.commerce.bundles[type].product_reference_field_name;
+}
+
+function commerce_get_content_type_product_reference_entities_field_name(type) {
+  return commerce_get_content_type_product_reference_field_name(type) + '_entities';
+}
