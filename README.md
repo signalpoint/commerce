@@ -103,12 +103,19 @@ Step 3: Modify `settings.js` to include the commerce module and settings:
 /* Contrib Modules */
 Drupal.modules.contrib['commerce'] = {};
 drupalgap.settings.commerce = {
-  product_field_name: 'field_product',
-  product_entities_field_name: 'field_product_entities'
-};
+    bundles: {
+      my_content_type_machine_name: {
+        product_reference_field_name: 'field_my_product_reference'
+      }
+    }
+  };
 ```
 
-Repeat steps #2-3, but for the addressfield module:
+Replace `my_content_type_machine_name` with your product display content type's machine name
+
+Replace `field_my_product_reference` with the machine name of the Product reference field for your product display's content type.
+
+Step 4: Install the Address Field module for DrupalGap:
 
 * https://github.com/signalpoint/addressfield
 
@@ -121,7 +128,7 @@ settings.js file. Here are some recommended default values:
 commerce_cart: {
   pages: {
     mode: 'exclude',
-    value: ['cart', 'checkout/*', 'checkout/shipping/*']
+    value: ['cart', 'checkout/*', 'checkout/shipping/*', 'checkout/review/*', 'checkout/payment/*']
   }
 }
 ```
