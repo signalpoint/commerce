@@ -1,102 +1,3 @@
-/****************************|
- *                           |
- * Commerce Global Variables |
- *                           |
- ****************************/
-
-// Holds onto order objects, keyed by order_id.
-var _commerce_order = {};
-
-// Holds onto the current product display.
-var _commerce_product_display = null;
-
-// Holds onto the current product display's referenced product entity field names.
-var _commerce_product_attribute_field_names = null;
-
-// Holds onto the current product display's referenced product id.
-var _commerce_product_display_product_id = null;
-
-/********************************|
- *                               |
- * Commerce Hook Implementations |
- *                               |
- ********************************/
-
-/**
- * Implements hook_install().
- */
-function commerce_install() {
-  drupalgap_add_css(drupalgap_get_path('module', 'commerce') + '/commerce.css');
-
-  // Init default settings if there aren't any.
-  if (typeof drupalgap.settings.commerce === 'undefined') {
-    console.log('WARNING - drupalgap.settings.commerce is undefined, view the README file for commerce.js');
-  }
-}
-
-/**
- * Implements hook_menu().
- */
-function commerce_menu() {
-  try {
-    var items = {};
-    items['cart'] = {
-      'title': 'Shopping cart',
-      'page_callback': 'commerce_cart_view',
-      'pageshow': 'commerce_cart_view_pageshow'
-    };
-    items['checkout/%'] = {
-      'title': 'Checkout',
-      'page_callback': 'drupalgap_get_form',
-      'page_arguments': ['commerce_checkout_view', 1],
-      'pageshow': 'commerce_checkout_view_pageshow'
-    };
-    items['checkout/shipping/%'] = {
-      'title': 'Shipping',
-      'page_callback': 'drupalgap_get_form',
-      'page_arguments': ['commerce_checkout_shipping_view', 2]
-    };
-    items['checkout/review/%'] = {
-      'title': 'Review Order',
-      'page_callback': 'drupalgap_get_form',
-      'page_arguments': ['commerce_checkout_review_order_view', 2],
-      'pageshow': 'commerce_checkout_review_order_view_pageshow'
-    };
-    items['checkout/complete/%'] = {
-      'title': 'Checkout Complete',
-      'page_callback': 'commerce_checkout_complete_view',
-      'pageshow': 'commerce_checkout_complete_view_pageshow',
-      'page_arguments': [2]
-    };
-    return items;
-  }
-  catch (error) { console.log('commerce_menu - ' + error); }
-}
-
-/**
- * Implements hook_services_success().
- */
-function commerce_services_postprocess(options, data) {
-  try {
-    // Extract the commerce object from the system connect result data.
-    if (options.service == 'system' && options.resource == 'connect') {
-      if (data.commerce) { drupalgap.commerce = data.commerce; }
-      else {
-        console.log('commerce_services_postprocess - failed to extract ' +
-            ' commerce object from system connect. Is the commerce_drupalgap ' +
-            ' module enabled on your Drupal site?');
-      }
-    }
-  }
-  catch (error) { console.log('commerce_services_postprocess - ' + error); }
-}
-
-/******************|
- *                 |
- * Commerce Blocks |
- *                 |
- ******************/
-
 /**
  * Implements hook_block_info().
  */
@@ -153,11 +54,119 @@ function _commerce_block_view(options) {
   }
 }
 
-/*****************|
- *                |
- * Commerce Pages |
- *                |
- *****************/
+/**
+ *
+ */
+function _commerce_cart_attribute_change() {
+  try {
+    _commerce_product_display_product_id = _commerce_product_display_get_current_product_id();
+  }
+  catch (error) { console.log('_commerce_cart_attribute_change - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_cart_view() {
+  try {
+    return '<div id="commerce_cart"></div>';
+  }
+  catch (error) { console.log('commerce_cart_view - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_cart_view_pageshow() {
+  try {
+    commerce_cart_index(null, {
+      success: function(result) {
+        if (result.length != 0) {
+          $.each(result, function(order_id, order) {
+            // Set aside the order so it can be used later without fetching
+            // it again.
+            _commerce_order[order_id] = order;
+            // Theme the cart and render it on the page.
+            var html = theme('commerce_cart', { order: order });
+            $('#commerce_cart').html(html).trigger('create');
+            return false; // Process only one cart.
+          });
+        }
+      }
+    });
+  }
+  catch (error) { console.log('commerce_cart_view_pageshow - ' + error); }
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function commerce_cart_field_formatter_view(entity_type, entity, field,
+                                            instance, langcode, items, display
+) {
+  try {
+    var element = {};
+    if (!empty(items)) {
+
+      // Generate markup that will place an empty div placeholder and pageshow
+      // handler that will dynamically inject the cart into the page.
+      var markup =
+          '<div id="' + commerce_cart_container_id(entity_type, entity.nid) + '"></div>' +
+          drupalgap_jqm_page_event_script_code({
+            page_id: drupalgap_get_page_id(),
+            jqm_page_event: 'pageshow',
+            jqm_page_event_callback:
+                '_commerce_cart_field_formatter_view_pageshow',
+            jqm_page_event_args: JSON.stringify({
+              entity_type: entity_type,
+              entity_id: entity.nid
+            })
+          });
+
+      // Place the markup on delta zero of the element.
+      element[0] = {
+        markup: markup
+      };
+    }
+    return element;
+  }
+  catch (error) {
+    console.log('commerce_cart_field_formatter_view - ' + error);
+  }
+}
+
+/**
+ *
+ */
+function _commerce_cart_field_formatter_view_pageshow(options) {
+  try {
+    var entity_type = options.entity_type;
+    var entity_id = options.entity_id;
+    // Load the product display.
+    commerce_product_display_load(entity_id, {
+      success: function(product_display) {
+        // Inject the add to cart form html into the container.
+        var form_html = drupalgap_get_form('commerce_cart_add_to_cart_form', product_display);
+        $('#' + commerce_cart_container_id(entity_type, entity_id)).html(form_html).trigger('create');
+      }
+    });
+  }
+  catch (error) {
+    console.log('_commerce_cart_field_formatter_view_pageshow - ' + error);
+  }
+}
+
+/**
+ * Given an entity type and entity id, this will return the html attribute id to
+ * use on the empty div container.
+ */
+function commerce_cart_container_id(entity_type, entity_id) {
+  try {
+    return 'commerce_cart_container_' + entity_type + '_' + entity_id;
+  }
+  catch (error) { console.log('commerce_cart_container_id - ' + error); }
+}
+
 /**
  *
  */
@@ -200,40 +209,6 @@ function commerce_checkout_complete_view_pageshow(order_id) {
   catch (error) {
     console.log('commerce_checkout_complete_view_pageshow - ' + error);
   }
-}
-
-/**
- *
- */
-function commerce_cart_view() {
-  try {
-    return '<div id="commerce_cart"></div>';
-  }
-  catch (error) { console.log('commerce_cart_view - ' + error); }
-}
-
-/**
- *
- */
-function commerce_cart_view_pageshow() {
-  try {
-    commerce_cart_index(null, {
-      success: function(result) {
-        if (result.length != 0) {
-          $.each(result, function(order_id, order) {
-            // Set aside the order so it can be used later without fetching
-            // it again.
-            _commerce_order[order_id] = order;
-            // Theme the cart and render it on the page.
-            var html = theme('commerce_cart', { order: order });
-            $('#commerce_cart').html(html).trigger('create');
-            return false; // Process only one cart.
-          });
-        }
-      }
-    });
-  }
-  catch (error) { console.log('commerce_cart_view_pageshow - ' + error); }
 }
 
 /**
@@ -619,6 +594,102 @@ function commerce_checkout_customer_profile_copy_toggle() {
 }
 
 /**
+ * Completes the checkout process.
+ * @param {Object} options
+ */
+function commerce_checkout_complete(options) {
+  try {
+    options.method = 'POST';
+    options.contentType = 'application/x-www-form-urlencoded';
+    options.path = 'checkout_complete.json';
+    if (typeof options.flatten_fields !== 'undefined' && options.flatten_fields === false) {
+      options.path += '&flatten_fields=false';
+    }
+    options.service = 'checkout_complete';
+    options.resource = 'create';
+    // Since the service resource is expecting URL encoded data, change the data
+    // object into a string.
+    if (options.data) {
+      var data = '';
+      for (var property in options.data) {
+        if (options.data.hasOwnProperty(property)) {
+          data += property + '=' + options.data[property] + '&';
+        }
+      }
+      // Remove last ampersand.
+      if (data != '') {
+        data = data.substring(0, data.length - 1);
+        options.data = data;
+      }
+    }
+    Drupal.services.call(options);
+  }
+  catch (error) {
+    console.log('commerce_checkout_complete - ' + error);
+  }
+}
+
+/**
+ * Saves a line item.
+ * @param {Object} line_item
+ * @param {Object} options
+ */
+function commerce_line_item_save(line_item, options) {
+  try {
+    commerce_line_item_update(line_item, options);
+  }
+  catch (error) { console.log('commerce_line_item_save - ' + error); }
+}
+
+/**
+ * Loads a product display.
+ * @param {Number} ids
+ * @param {Object} options
+ */
+function commerce_product_display_load(ids, options) {
+  try {
+    commerce_product_display_retrieve(ids, options);
+  }
+  catch (error) { console.log('commerce_product_display_load - ' + error); }
+}
+
+/**
+ * Loads a commerce order.
+ * @param {Number} ids
+ * @param {Object} options
+ */
+function commerce_order_load(ids, options) {
+  try {
+    commerce_order_retrieve(ids, options);
+  }
+  catch (error) { console.log('commerce_order_load - ' + error); }
+}
+
+/**
+ * Saves a commerce order.
+ * @param {Object} order
+ * @param {Object} options
+ */
+function commerce_order_save(order, options) {
+  try {
+    commerce_order_update(order, options);
+  }
+  catch (error) { console.log('commerce_order_save - ' + error); }
+}
+
+/**
+ * Loads a commerce product.
+ * @param {Number} ids
+ * @param {Object} options
+ */
+function commerce_product_load(ids, options) {
+  try {
+    commerce_product_retrieve(ids, options);
+  }
+  catch (error) { console.log('commerce_product_load - ' + error); }
+}
+
+/**
  *
  */
 function commerce_cart_add_to_cart_form(form, form_state, product_display) {
@@ -814,14 +885,239 @@ function _commerce_cart_add_to_cart_form_submit_success(result) {
   catch (error) { console.log('_commerce_cart_add_to_cart_form_submit_success - ' + error); }
 }
 
+// Holds onto order objects, keyed by order_id.
+var _commerce_order = {};
+
+// Holds onto the current product display.
+var _commerce_product_display = null;
+
+// Holds onto the current product display's referenced product entity field names.
+var _commerce_product_attribute_field_names = null;
+
+// Holds onto the current product display's referenced product id.
+var _commerce_product_display_product_id = null;
+
+function commerce_get_content_type_product_reference_field_name(type) {
+  return drupalgap.settings.commerce.bundles[type].product_reference_field_name;
+}
+
+function commerce_get_content_type_product_reference_entities_field_name(type) {
+  return commerce_get_content_type_product_reference_field_name(type) + '_entities';
+}
+
+/**
+ * The click handler for the "Remove" button on a line item on the cart page.
+ */
+function _commerce_cart_line_item_remove(order_id, line_item_id) {
+  try {
+    commerce_line_item_delete(line_item_id, {
+      success: function(result) {
+        // @TODO - once DG core supports reloading the same page, we can just
+        // make a call to drupalgap_goto(). Just re-run the pageshow event
+        // handler.
+        //drupalgap_goto('cart', { reloadPage: true });
+        commerce_cart_view_pageshow();
+      }
+    });
+  }
+  catch (error) { console.log('_commerce_cart_line_item_remove - ' + error); }
+}
+
+/**
+ * Handle clicks on the "Update cart" button.
+ */
+function commerce_cart_button_update_click(order_id) {
+  try {
+    // @TODO - this is working, but since it appears we can't use the order
+    // update resource to make one single call to update line item quantities,
+    // we have manually update each line item, which results in multiple
+    // server calls, and multiple cart rebuilds on success.
+    var order = _commerce_order[order_id];
+    $.each(order.commerce_line_items_entities, function(line_item_id, line_item) {
+      var quantity = $('#commerce_cart_line_item_quantity_' + line_item_id).val() + '.00';
+      var _quantity = order.commerce_line_items_entities[line_item_id].quantity;
+      if (quantity != _quantity) {
+        var line_item = {
+          line_item_id: parseInt(line_item_id),
+          quantity: quantity
+        };
+        commerce_line_item_save(line_item, {
+          quantity: quantity,
+          success: function(result) {
+            commerce_cart_view_pageshow();
+          }
+        });
+      }
+    });
+  }
+  catch (error) { console.log('commerce_cart_button_update_click - ' + error); }
+}
+
+/**
+ * Implements hook_install().
+ */
+function commerce_install() {
+  drupalgap_add_css(drupalgap_get_path('module', 'commerce') + '/commerce.css');
+
+  // Init default settings if there aren't any.
+  if (typeof drupalgap.settings.commerce === 'undefined') {
+    console.log('WARNING - drupalgap.settings.commerce is undefined, view the README file for commerce.js');
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function commerce_menu() {
+  try {
+    var items = {};
+    items['cart'] = {
+      'title': 'Shopping cart',
+      'page_callback': 'commerce_cart_view',
+      'pageshow': 'commerce_cart_view_pageshow'
+    };
+    items['checkout/%'] = {
+      'title': 'Checkout',
+      'page_callback': 'drupalgap_get_form',
+      'page_arguments': ['commerce_checkout_view', 1],
+      'pageshow': 'commerce_checkout_view_pageshow'
+    };
+    items['checkout/shipping/%'] = {
+      'title': 'Shipping',
+      'page_callback': 'drupalgap_get_form',
+      'page_arguments': ['commerce_checkout_shipping_view', 2]
+    };
+    items['checkout/review/%'] = {
+      'title': 'Review Order',
+      'page_callback': 'drupalgap_get_form',
+      'page_arguments': ['commerce_checkout_review_order_view', 2],
+      'pageshow': 'commerce_checkout_review_order_view_pageshow'
+    };
+    items['checkout/complete/%'] = {
+      'title': 'Checkout Complete',
+      'page_callback': 'commerce_checkout_complete_view',
+      'pageshow': 'commerce_checkout_complete_view_pageshow',
+      'page_arguments': [2]
+    };
+    return items;
+  }
+  catch (error) { console.log('commerce_menu - ' + error); }
+}
+
+/**
+ * Implements hook_services_success().
+ */
+function commerce_services_postprocess(options, data) {
+  try {
+    // Extract the commerce object from the system connect result data.
+    if (options.service == 'system' && options.resource == 'connect') {
+      if (data.commerce) { drupalgap.commerce = data.commerce; }
+      else {
+        console.log('commerce_services_postprocess - failed to extract ' +
+            ' commerce object from system connect. Is the commerce_drupalgap ' +
+            ' module enabled on your Drupal site?');
+      }
+    }
+  }
+  catch (error) { console.log('commerce_services_postprocess - ' + error); }
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function commerce_price_field_formatter_view(entity_type, entity, field,
+                                             instance, langcode, items, display
+) {
+  try {
+    var element = {};
+    if (!empty(items)) {
+      // The items sent in are not like typical a typical item/delta collection.
+      // It just contains the amount and currency code, so we'll just use a
+      // delta of zero.
+      var markup = '';
+      switch (items.currency_code) {
+        case 'USD':
+          markup += '$';
+          break;
+        default:
+          markup += items.currency_code + ' ';
+          break;
+      }
+      markup += (items.amount/100).toFixed(2);
+      element[0] = {
+        markup: markup
+      };
+    }
+    return element;
+  }
+  catch (error) {
+    console.log('commerce_price_field_formatter_view - ' + error);
+  }
+}
+
 /**
  *
  */
-function _commerce_cart_attribute_change() {
+function commerce_line_item_primary_key() {
+  return 'line_item_id';
+}
+
+/**
+ *
+ */
+function _commerce_line_item_add_to_order(options) {
   try {
-    _commerce_product_display_product_id = _commerce_product_display_get_current_product_id();
+    var product_id = _commerce_product_display_get_current_product_id();
+    if (!product_id) {
+      console.log('WARNING: _commerce_line_item_add_to_order - no product_id');
+      return;
+    }
+    commerce_line_item_create({
+      data: {
+        order_id: options.order.order_id,
+        type: 'product',
+        commerce_product: product_id
+      },
+      success: function(result) {
+        //dpm('commerce_line_item_create');
+        //dpm(result);
+        if (options.success) { options.success(result); }
+      }
+    });
   }
-  catch (error) { console.log('_commerce_cart_attribute_change - ' + error); }
+  catch (error) { console.log('_commerce_line_item_add_to_order - ' + error); }
+}
+
+/**
+ *
+ */
+function commerce_order_primary_key() {
+  try {
+    return 'order_id';
+  }
+  catch (error) { console.log('commerce_order_primary_key - ' + error); }
+}
+
+
+/**
+ * Returns JSON with data about the types of commerce products.
+ */
+function commerce_product_types() {
+  try {
+    return drupalgap.commerce.commerce_product_types;
+  }
+  catch (error) { drupalgap_error(error); }
+}
+
+/**
+ * Returns JSON with data about the node types that have a commerce product
+ * reference field attached to the content type.
+ */
+function commerce_product_reference_node_types() {
+  try {
+    return drupalgap.commerce.commerce_product_reference_node_types;
+  }
+  catch (error) { drupalgap_error(error); }
 }
 
 /**
@@ -863,187 +1159,6 @@ function _commerce_product_display_get_current_product_id() {
   }
   catch (error) { console.log('_commerce_product_display_get_current_product_id - ' + error); }
 }
-
-/**
- *
- */
-function _commerce_line_item_add_to_order(options) {
-  try {
-    var product_id = _commerce_product_display_get_current_product_id();
-    if (!product_id) {
-      console.log('WARNING: _commerce_line_item_add_to_order - no product_id');
-      return;
-    }
-    commerce_line_item_create({
-      data: {
-        order_id: options.order.order_id,
-        type: 'product',
-        commerce_product: product_id
-      },
-      success: function(result) {
-        //dpm('commerce_line_item_create');
-        //dpm(result);
-        if (options.success) { options.success(result); }
-      }
-    });
-  }
-  catch (error) { console.log('_commerce_line_item_add_to_order - ' + error); }
-}
-
-/**
- * Returns JSON with data about the types of commerce products.
- */
-function commerce_product_types() {
-  try {
-    return drupalgap.commerce.commerce_product_types;
-  }
-  catch (error) { drupalgap_error(error); }
-}
-
-/**
- * Returns JSON with data about the node types that have a commerce product
- * reference field attached to the content type.
- */
-function commerce_product_reference_node_types() {
-  try {
-    return drupalgap.commerce.commerce_product_reference_node_types;
-  }
-  catch (error) { drupalgap_error(error); }
-}
-
-/**
- * Implements hook_field_formatter_view().
- */
-function commerce_cart_field_formatter_view(entity_type, entity, field,
-                                            instance, langcode, items, display
-) {
-  try {
-    var element = {};
-    if (!empty(items)) {
-
-      // Generate markup that will place an empty div placeholder and pageshow
-      // handler that will dynamically inject the cart into the page.
-      var markup =
-          '<div id="' + commerce_cart_container_id(entity_type, entity.nid) + '"></div>' +
-          drupalgap_jqm_page_event_script_code({
-            page_id: drupalgap_get_page_id(),
-            jqm_page_event: 'pageshow',
-            jqm_page_event_callback:
-                '_commerce_cart_field_formatter_view_pageshow',
-            jqm_page_event_args: JSON.stringify({
-              entity_type: entity_type,
-              entity_id: entity.nid
-            })
-          });
-
-      // Place the markup on delta zero of the element.
-      element[0] = {
-        markup: markup
-      };
-    }
-    return element;
-  }
-  catch (error) {
-    console.log('commerce_cart_field_formatter_view - ' + error);
-  }
-}
-
-/**
- *
- */
-function _commerce_cart_field_formatter_view_pageshow(options) {
-  try {
-    var entity_type = options.entity_type;
-    var entity_id = options.entity_id;
-    // Load the product display.
-    commerce_product_display_load(entity_id, {
-      success: function(product_display) {
-        // Inject the add to cart form html into the container.
-        var form_html = drupalgap_get_form('commerce_cart_add_to_cart_form', product_display);
-        $('#' + commerce_cart_container_id(entity_type, entity_id)).html(form_html).trigger('create');
-      }
-    });
-  }
-  catch (error) {
-    console.log('_commerce_cart_field_formatter_view_pageshow - ' + error);
-  }
-}
-
-/**
- * Given an entity type and entity id, this will return the html attribute id to
- * use on the empty div container.
- */
-function commerce_cart_container_id(entity_type, entity_id) {
-  try {
-    return 'commerce_cart_container_' + entity_type + '_' + entity_id;
-  }
-  catch (error) { console.log('commerce_cart_container_id - ' + error); }
-}
-
-/**
- * Implements hook_field_formatter_view().
- */
-function commerce_price_field_formatter_view(entity_type, entity, field,
-                                             instance, langcode, items, display
-) {
-  try {
-    var element = {};
-    if (!empty(items)) {
-      // The items sent in are not like typical a typical item/delta collection.
-      // It just contains the amount and currency code, so we'll just use a
-      // delta of zero.
-      var markup = '';
-      switch (items.currency_code) {
-        case 'USD':
-          markup += '$';
-          break;
-        default:
-          markup += items.currency_code + ' ';
-          break;
-      }
-      markup += (items.amount/100).toFixed(2);
-      element[0] = {
-        markup: markup
-      };
-    }
-    return element;
-  }
-  catch (error) {
-    console.log('commerce_price_field_formatter_view - ' + error);
-  }
-}
-
-/************************|
- *                       |
- * Commerce Primary Keys |
- *                       |
- ************************/
-
-/**
- *
- */
-function commerce_order_primary_key() {
-  try {
-    return 'order_id';
-  }
-  catch (error) { console.log('commerce_order_primary_key - ' + error); }
-}
-
-/**
- *
- */
-function commerce_line_item_primary_key() {
-  try {
-    return 'line_item_id';
-  }
-  catch (error) { console.log('commerce_order_primary_key - ' + error); }
-}
-
-/************************************|
- *                                   |
- * Commerce Services Implementations |
- *                                   |
- ************************************/
 
 /**
  * Implements hook_services_preprocess().
@@ -1324,168 +1439,6 @@ function commerce_product_index(query, options) {
   catch (error) { console.log('commerce_product_index - ' + error); }
 }
 
-/*******************|
- *                  |
- * Service Wrappers |
- *                  |
- *******************/
-
-/**
- * Saves a line item.
- * @param {Object} line_item
- * @param {Object} options
- */
-function commerce_line_item_save(line_item, options) {
-  try {
-    commerce_line_item_update(line_item, options);
-  }
-  catch (error) { console.log('commerce_line_item_save - ' + error); }
-}
-
-/**
- * Loads a product display.
- * @param {Number} ids
- * @param {Object} options
- */
-function commerce_product_display_load(ids, options) {
-  try {
-    commerce_product_display_retrieve(ids, options);
-  }
-  catch (error) { console.log('commerce_product_display_load - ' + error); }
-}
-
-/**
- * Loads a commerce order.
- * @param {Number} ids
- * @param {Object} options
- */
-function commerce_order_load(ids, options) {
-  try {
-    commerce_order_retrieve(ids, options);
-  }
-  catch (error) { console.log('commerce_order_load - ' + error); }
-}
-
-/**
- * Saves a commerce order.
- * @param {Object} order
- * @param {Object} options
- */
-function commerce_order_save(order, options) {
-  try {
-    commerce_order_update(order, options);
-  }
-  catch (error) { console.log('commerce_order_save - ' + error); }
-}
-
-/**
- * Loads a commerce product.
- * @param {Number} ids
- * @param {Object} options
- */
-function commerce_product_load(ids, options) {
-  try {
-    commerce_product_retrieve(ids, options);
-  }
-  catch (error) { console.log('commerce_product_load - ' + error); }
-}
-
-/**************************|
- *                         |
- * Commerce Click Handlers |
- *                         |
- **************************/
-
-/**
- * The click handler for the "Remove" button on a line item on the cart page.
- */
-function _commerce_cart_line_item_remove(order_id, line_item_id) {
-  try {
-    commerce_line_item_delete(line_item_id, {
-      success: function(result) {
-        // @TODO - once DG core supports reloading the same page, we can just
-        // make a call to drupalgap_goto(). Just re-run the pageshow event
-        // handler.
-        //drupalgap_goto('cart', { reloadPage: true });
-        commerce_cart_view_pageshow();
-      }
-    });
-  }
-  catch (error) { console.log('_commerce_cart_line_item_remove - ' + error); }
-}
-
-/**
- * Handle clicks on the "Update cart" button.
- */
-function commerce_cart_button_update_click(order_id) {
-  try {
-    // @TODO - this is working, but since it appears we can't use the order
-    // update resource to make one single call to update line item quantities,
-    // we have manually update each line item, which results in multiple
-    // server calls, and multiple cart rebuilds on success.
-    var order = _commerce_order[order_id];
-    $.each(order.commerce_line_items_entities, function(line_item_id, line_item) {
-      var quantity = $('#commerce_cart_line_item_quantity_' + line_item_id).val() + '.00';
-      var _quantity = order.commerce_line_items_entities[line_item_id].quantity;
-      if (quantity != _quantity) {
-        var line_item = {
-          line_item_id: parseInt(line_item_id),
-          quantity: quantity
-        };
-        commerce_line_item_save(line_item, {
-          quantity: quantity,
-          success: function(result) {
-            commerce_cart_view_pageshow();
-          }
-        });
-      }
-    });
-  }
-  catch (error) { console.log('commerce_cart_button_update_click - ' + error); }
-}
-
-/**
- * Completes the checkout process.
- * @param {Object} options
- */
-function commerce_checkout_complete(options) {
-  try {
-    options.method = 'POST';
-    options.contentType = 'application/x-www-form-urlencoded';
-    options.path = 'checkout_complete.json';
-    if (typeof options.flatten_fields !== 'undefined' && options.flatten_fields === false) {
-      options.path += '&flatten_fields=false';
-    }
-    options.service = 'checkout_complete';
-    options.resource = 'create';
-    // Since the service resource is expecting URL encoded data, change the data
-    // object into a string.
-    if (options.data) {
-      var data = '';
-      for (var property in options.data) {
-        if (options.data.hasOwnProperty(property)) {
-          data += property + '=' + options.data[property] + '&';
-        }
-      }
-      // Remove last ampersand.
-      if (data != '') {
-        data = data.substring(0, data.length - 1);
-        options.data = data;
-      }
-    }
-    Drupal.services.call(options);
-  }
-  catch (error) {
-    console.log('commerce_checkout_complete - ' + error);
-  }
-}
-
-/*********************************|
- *                                |
- * Commerce Theme Implementations |
- *                                |
- *********************************/
-
 /**
  * Theme a commerce cart.
  */
@@ -1664,16 +1617,4 @@ function theme_commerce_cart_total(variables) {
         '</h3>';
   }
   catch (error) { console.log('theme_commerce_cart_total - ' + error); }
-}
-
-/**
- * HELPERS
- */
-
-function commerce_get_content_type_product_reference_field_name(type) {
-  return drupalgap.settings.commerce.bundles[type].product_reference_field_name;
-}
-
-function commerce_get_content_type_product_reference_entities_field_name(type) {
-  return commerce_get_content_type_product_reference_field_name(type) + '_entities';
 }
