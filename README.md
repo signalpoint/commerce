@@ -97,23 +97,40 @@ Step 2: Extract the module into the `www/app/modules` folder, so it lives here:
 
 * www/app/modules/commerce
 
-Step 3: Modify `settings.js` to include the commerce module and settings:
+Step 3: Modify `settings.js` to include the commerce module and settings, for example:
 
 ```
 /* Contrib Modules */
-Drupal.modules.contrib['commerce'] = {};
+Drupal.modules.contrib['commerce'] = {
+  minified: true
+};
 drupalgap.settings.commerce = {
-    bundles: {
-      my_content_type_machine_name: {
-        product_reference_field_name: 'field_my_product_reference'
-      }
+  bundles: {
+    bags_cases: {
+      product_reference_field_name: 'field_product'
+    },
+    drinks: {
+      product_reference_field_name: 'field_product'
+    },
+    hats: {
+      product_reference_field_name: 'field_product'
+    },
+    shoes: {
+      product_reference_field_name: 'field_product'
+    },
+    storage_devices: {
+      product_reference_field_name: 'field_product'
+    },
+    tops: {
+      product_reference_field_name: 'field_product'
     }
-  };
+  }
+};
 ```
 
-Replace `my_content_type_machine_name` with your product display content type's machine name
+Replace the *bundles* property name(s) with the machine name(s) of your product display content type(s).
 
-Replace `field_my_product_reference` with the machine name of the Product reference field for your product display's content type.
+Replace `field_product` with the machine name of the Product reference field for your product display's content type.
 
 Step 4: Install the Address Field module for DrupalGap:
 
@@ -148,3 +165,8 @@ Drupal commerce does not allow anonymous user's to edit their own orders, AFAIK.
 The `commerce_entity_access()` function and the boolean that checks for `$account->uid` won't allow anonymous users to edit their own orders even if you grant permission.
 
 Until this "bug" is addressed, all users of your app must be authenticated to be able to add an item to the cart.
+
+```
+drupalgap_get_form - failed to get form (commerce_cart_add_to_cart_form)
+```
+Have you added the `drupalgap.settings.commerce` config to your `settings.js` file for each content type and product reference field? See step 3 above.
