@@ -1,0 +1,26 @@
+{
+  "name": "commerce",
+  "version": "7.0.0",
+  "description": "The Commerce module for DrupalGap",
+  "main": "commerce.min.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/signalpoint/commerce.git"
+  },
+  "keywords": [
+    "drupal"
+  ],
+  "author": "Tyler Frankenstein",
+  "homepage": "http://drupalgap.org/project/commerce",
+  "devDependencies": {
+    "grunt": "~0.4.5",
+    "grunt-contrib-concat": "^0.5.1",
+    "grunt-contrib-uglify": "^0.9.1",
+    "grunt-contrib-watch": "^0.6.1",
+    "shelljs": "^0.2.6",
+    "tmp": "0.0.23"
+  }
+}
