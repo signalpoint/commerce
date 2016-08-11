@@ -22,22 +22,7 @@ Step 1a. Patch the commerce_services module in Drupal with these patches:
 - https://www.drupal.org/node/2402977
 - https://www.drupal.org/node/2475219
 
-Step 2. After enabling the Commerce DrupalGap module on your site, open up your Drupal
-Database (e.g. MySQL PHPMyAdmin) and verify the module weight for
-`commerce_drupalgap` is `1001`. Do this by executing the following query, and
-looking at the weight value:
-
-```
-SELECT name, weight FROM system WHERE name = 'commerce_drupalgap';
-```
-  
-If it isn't set to 1001, execute this query:
-
-```  
-UPDATE system SET weight = 1001 WHERE name = 'commerce_drupalgap';
-```
-
-Then flush all of Drupal's caches.
+Step 2. After enabling the Commerce DrupalGap module on your site, then flush all of Drupal's caches for good luck.
 
 Step 3. Go to `admin/structure/services/list/drupalgap/resources` and enable the
 following resources:
@@ -89,13 +74,17 @@ admin/structure/types
 
 ## DrupalGap Setup
 
+Step 0: Enable the Address Field module for DrupalGap:
+
+- https://github.com/signalpoint/addressfield
+
 Step 1: Download the DrupalGap Commerce module:
 
-* https://github.com/signalpoint/commerce
+- https://github.com/signalpoint/commerce
 
 Step 2: Extract the module into the `www/app/modules` folder, so it lives here:
 
-* www/app/modules/commerce
+- www/app/modules/commerce
 
 Step 3: Modify `settings.js` to include the commerce module and settings, for example:
 
