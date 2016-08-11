@@ -60,117 +60,12 @@ function commerce_checkout_view(form, form_state, order_id) {
       default_value: order_id
     };
 
-    // Billing Information
     form.elements['billing_information'] = {
-      title: 'Billing Information',
-      markup: ''
-    };
-    form.elements['billing_name_line'] = {
-      type: 'textfield',
-      title: 'Full name',
-      required: true
-    };
-    // @TODO - need dynamic data fetching here.
-    form.elements['billing_country'] = {
-      title: 'Country',
-      type: 'select',
-      options: {
-        'US': 'United States',
-        'UK': 'United Kingdom',
-        'CA': 'Canada'
-      },
-      default_value: 'US'
-    };
-    form.elements['billing_thoroughfare'] = {
-      type: 'textfield',
-      title: 'Address 1',
-      required: true
-    };
-    form.elements['billing_premise'] = {
-      type: 'textfield',
-      title: 'Address 2',
-      required: false
-    };
-    form.elements['billing_locality'] = {
-      type: 'textfield',
-      title: 'City',
-      required: true
-    };
-    form.elements['billing_administrative_area'] = {
-      title: 'State',
-      type: 'select',
-      options: {
-        'MI': 'Michigan',
-        'TX': 'Texas'
-      },
-      default_value: 'MI',
-      required: true
-    };
-    form.elements['billing_postal_code'] = {
-      type: 'textfield',
-      title: 'Zip',
-      required: true
-    };
-
-    // Shipping Information
-    form.elements['shipping_information'] = {
-      title: 'Shipping Information',
-      markup: ''
-    };
-    form.elements['customer_profile_copy'] = {
-      title: 'Same as Billing Information',
-      type: 'checkbox',
-      description: '',
-      default_value: 1,
-      options: {
-        attributes: {
-          onclick: '_commerce_checkout_customer_profile_copy_onclick()'
-        }
-      }
-    };
-    form.elements['shipping_name_line'] = {
-      type: 'textfield',
-      title: 'Full name',
-      required: true
-    };
-    form.elements['shipping_country'] = {
-      title: 'Country',
-      type: 'select',
-      options: {
-        'US': 'United States',
-        'UK': 'United Kingdom',
-        'CA': 'Canada'
-      },
-      default_value: 'US'
-    };
-    form.elements['shipping_thoroughfare'] = {
-      type: 'textfield',
-      title: 'Address 1',
-      required: true
-    };
-    form.elements['shipping_premise'] = {
-      type: 'textfield',
-      title: 'Address 2',
-      required: false
-    };
-    form.elements['shipping_locality'] = {
-      type: 'textfield',
-      title: 'City',
-      required: true
-    };
-    form.elements['shipping_administrative_area'] = {
-      title: 'State',
-      type: 'select',
-      options: {
-        'TX': 'Texas'
-      },
-      default_value: 'TX',
-      required: true
-    };
-    form.elements['shipping_postal_code'] = {
-      type: 'textfield',
-      title: 'Zip',
-      required: true
+      type: 'addressfield_form_element',
+      title: t('Billing information'),
+      default_country: 'US',
+      required: true,
+      value_callback: 'addressfield_field_value_callback'
     };
 
     // Buttons
@@ -190,7 +85,14 @@ function commerce_checkout_view(form, form_state, order_id) {
  */
 function commerce_checkout_view_pageshow(form_id, order_id) {
   try {
-    commerce_checkout_customer_profile_copy_toggle();
+    // Load the order, so we can inject potential addressfield info
+    // into the pane via a services post process hook
+    commerce_order_load(order_id, {
+      success: function(order) {
+
+      }
+    });
+    //commerce_checkout_customer_profile_copy_toggle();
   }
   catch (error) { console.log('commerce_checkout_view_pageshow - ' + error); }
 }
@@ -218,9 +120,24 @@ function commerce_checkout_view_validate(form, form_state) {
  */
 function commerce_checkout_view_submit(form, form_state) {
   try {
+
+    // Load the order...
+    //commerce_order_load(form_state.values.order_id, {
+    //  success: function(order) {
+    //    console.log(order);
+    //  }
+    //});
+    //
+    //console.log(form, form_state);
+    //return;
+
+    // Update the cart's billing information.
+    //commerce_order_update(order, options);
+
+
     variable_set('commerce_checkout_form_state', form_state);
     var path = 'checkout/review/' + form_state.values['order_id'];
-    if (module_exists('commerce_shipping')) {
+    if (drupalgap.commerce.commerce_shipping) {
       path = 'checkout/shipping/' + form_state.values['order_id'];
     }
     drupalgap_goto(path);
@@ -405,23 +322,6 @@ function _commerce_checkout_customer_profile_copy_onclick() {
     commerce_checkout_customer_profile_copy_toggle();
   }
   catch (error) { console.log('_commerce_checkout_customer_profile_copy_onclick - ' + error); }
-}
-
-/**
- *
- */
-function commerce_checkout_customer_profile_copy_toggle() {
-  try {
-    var checked = $('#edit-commerce-checkout-view-customer-profile-copy').is(':checked');
-    // Hide the shipping input fields.
-    var names = commerce_checkout_shipping_element_names();
-    $.each(names, function(index, name) {
-      var selector = '.' + drupalgap_form_get_element_container_class(name).replace('form-item ', '');
-      if (!checked) { $(selector).show(); }
-      else { $(selector).hide(); }
-    });
-  }
-  catch (error) { console.log('commerce_checkout_customer_profile_copy_toggle - ' + error); }
 }
 
 /**

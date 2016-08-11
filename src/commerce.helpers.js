@@ -53,3 +53,20 @@ function commerce_cart_button_update_click(order_id) {
   }
   catch (error) { console.log('commerce_cart_button_update_click - ' + error); }
 }
+
+/**
+ *
+ */
+function commerce_checkout_customer_profile_copy_toggle() {
+  try {
+    var checked = $('#edit-commerce-checkout-view-customer-profile-copy').is(':checked');
+    // Hide the shipping input fields.
+    var names = commerce_checkout_shipping_element_names();
+    $.each(names, function(index, name) {
+      var selector = '.' + drupalgap_form_get_element_container_class(name).replace('form-item ', '');
+      if (!checked) { $(selector).show(); }
+      else { $(selector).hide(); }
+    });
+  }
+  catch (error) { console.log('commerce_checkout_customer_profile_copy_toggle - ' + error); }
+}
