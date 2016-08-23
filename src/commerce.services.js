@@ -354,6 +354,7 @@ function commerce_customer_profile_update(customer_profile, options) {
     if (data.revision_id) { delete data.revision_id; }
     if (data.revision_uid) { delete data.revision_uid; }
     if (data.revision_timestamp) { delete data.revision_timestamp; }
+    if (data.rdf_mapping) { delete data.rdf_mapping; }
     if (typeof data.data !== 'undefined') { delete data.data; }
 
     // Set up defaults and make the call.
