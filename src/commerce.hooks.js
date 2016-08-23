@@ -33,13 +33,13 @@ function commerce_menu() {
       'page_arguments': ['commerce_checkout_shipping_view', 2]
     };
     items['checkout/review/%'] = {
-      'title': 'Review Order',
-      'page_callback': 'drupalgap_get_form',
-      'page_arguments': ['commerce_checkout_review_order_view', 2],
-      'pageshow': 'commerce_checkout_review_order_view_pageshow'
+      'title': 'Review order',
+      'page_callback': 'commerce_checkout_review_order_page',
+      'page_arguments': [2],
+      'pageshow': 'commerce_checkout_review_order_pageshow'
     };
     items['checkout/complete/%'] = {
-      'title': 'Checkout Complete',
+      'title': 'Checkout complete',
       'page_callback': 'commerce_checkout_complete_view',
       'pageshow': 'commerce_checkout_complete_view_pageshow',
       'page_arguments': [2]
