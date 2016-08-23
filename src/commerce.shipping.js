@@ -31,6 +31,11 @@ function commerce_checkout_shipping_view(form, form_state, order_id) {
       default_country: 'US',
       required: true,
       value_callback: 'addressfield_field_value_callback',
+      components: {
+        name_line: true,
+        thoroughfare: true,
+        premise: true
+      },
       options: {
         attributes: {
           style: 'display: none;'
@@ -44,6 +49,7 @@ function commerce_checkout_shipping_view(form, form_state, order_id) {
       value: 'Continue to next step'
     };
     form.buttons['cancel'] = drupalgap_form_cancel_button();
+    form.buttons['cancel'].title = t('Go back');
 
     return form;
   }
