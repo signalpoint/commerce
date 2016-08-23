@@ -32,6 +32,7 @@ function _commerce_addressfield_inject_components(order, field_name) {
   var form_id = drupalgap_router_path_get() == 'checkout/%' ? 'commerce_checkout_view' : 'commerce_checkout_shipping_view';
   var addressfield_name = form_id == 'commerce_checkout_view' ? 'billing_information' : 'shipping_information';
   var prefix = drupalgap_form_get_element_id(addressfield_name, form_id);
+  // @TODO use the new addressfield_inject_components() helper here instead!
   $.each(address, function(component, value) {
     var id = prefix + '-' + component;
     var input = $('#' + id);
