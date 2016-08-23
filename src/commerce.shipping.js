@@ -84,8 +84,44 @@ function commerce_checkout_shipping_view_validate(form, form_state) {
 function commerce_checkout_shipping_view_submit(form, form_state) {
   try {
     variable_set('commerce_shipping_form_state', form_state);
-    var path = 'checkout/review/' + form_state.values['order_id'];
-    drupalgap_goto(path);
+    var order_id = form_state.values.order_id;
+
+    // Load the order...
+    commerce_order_load(order_id, {
+      success: function(order) {
+        //console.log(order);
+
+        // When continuing, send them along to review their order unless shipping is enabled,
+        // then send them off to shipping first.
+        var done = function() {
+          drupalgap_goto('checkout/review/' + form_state.values['order_id']);
+        };
+
+        // If there is no shipping customer profile on the order, create the customer
+        // profile and attach it to the order,
+        if (!order.commerce_customer_shipping) {
+          commerce_customer_profile_create({
+            type: 'shipping',
+            commerce_customer_address: form_state.values.shipping_information
+          }, {
+            success: function(customer_profile) {
+              order.commerce_customer_shipping = customer_profile.profile_id;
+              commerce_order_update(order, { success: done });
+            }
+          });
+        }
+        else {
+          // They already have a shipping customer profile on the order, update the customer profile
+          // then continue.
+          var profile_id = order.commerce_customer_shipping;
+          var customer_profile = order.commerce_customer_shipping_entities[profile_id];
+          customer_profile.commerce_customer_address = form_state.values.shipping_information;
+          commerce_customer_profile_update(customer_profile, { success: done });
+        }
+
+      }
+    });
+
   }
   catch (error) { console.log('commerce_checkout_shipping_view_submit - ' + error); }
 }
