@@ -242,9 +242,7 @@ function commerce_checkout_complete_view(order_id) {
 function commerce_checkout_complete_view_pageshow(order_id) {
   try {
     commerce_checkout_complete({
-      data: {
-        order_id: order_id,
-      },
+      data: { order_id: order_id },
       success: function(result) {
         var checkout_complete_html = '<div>Checkout Complete</div>';
         $('#commerce_checkout_complete_' + order_id).html(checkout_complete_html).trigger('create');
@@ -260,7 +258,6 @@ function commerce_checkout_complete_view_pageshow(order_id) {
         }
       }
     });
-
   }
   catch (error) {
     console.log('commerce_checkout_complete_view_pageshow - ' + error);
@@ -268,16 +265,13 @@ function commerce_checkout_complete_view_pageshow(order_id) {
 }
 
 /**
- * The checkout page.
+ * The billing page.
  */
 function commerce_checkout_view(form, form_state, order_id) {
   try {
     // @NOTE - when testing, if you sent the app's front page to the checkout
     // page, the drupalgap.commerce object may not be available yet. It's better
     // to set the front page to the cart page instead.
-
-    // @TODO - Need dynamic checkout pane retrieval here.
-    // @TODO - utilize the new addressfield form element available in addressfield.js
 
     // Order ID
     form.elements['order_id'] = {
@@ -290,7 +284,12 @@ function commerce_checkout_view(form, form_state, order_id) {
       title: t('Billing information'),
       default_country: 'US',
       required: true,
-      value_callback: 'addressfield_field_value_callback'
+      value_callback: 'addressfield_field_value_callback',
+      components: {
+        name_line: true,
+        thoroughfare: true,
+        premise: true
+      }
     };
 
     // Buttons
@@ -299,6 +298,7 @@ function commerce_checkout_view(form, form_state, order_id) {
       value: 'Continue to next step'
     };
     form.buttons['cancel'] = drupalgap_form_cancel_button();
+    form.buttons['cancel'].title = t('Go back');
 
     return form;
   }
@@ -990,6 +990,8 @@ function commerce_menu() {
   catch (error) { console.log('commerce_menu - ' + error); }
 }
 
+
+
 /**
  * Implements hook_services_success().
  */
@@ -1568,6 +1570,11 @@ function commerce_checkout_shipping_view(form, form_state, order_id) {
       default_country: 'US',
       required: true,
       value_callback: 'addressfield_field_value_callback',
+      components: {
+        name_line: true,
+        thoroughfare: true,
+        premise: true
+      },
       options: {
         attributes: {
           style: 'display: none;'
@@ -1581,6 +1588,7 @@ function commerce_checkout_shipping_view(form, form_state, order_id) {
       value: 'Continue to next step'
     };
     form.buttons['cancel'] = drupalgap_form_cancel_button();
+    form.buttons['cancel'].title = t('Go back');
 
     return form;
   }
