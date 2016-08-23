@@ -40,10 +40,22 @@ function commerce_services_preprocess(options) {
           );
         }
         break;
+      case 'commerce_customer_profile':
+        if (options.resource == 'retrieve' || options.resource == 'update') {
+          options.path = options.path.replace(
+              'commerce_customer_profile',
+              'customer-profile'
+          );
+        }
+        break;
     }
   }
   catch (error) { console.log('commerce_services_preprocess - ' + error); }
 }
+
+/**
+ * CART
+ */
 
 /**
  * Creates a cart.
@@ -81,7 +93,11 @@ function commerce_cart_index(query, options) {
 }
 
 /**
- * Creates a cart.
+ * LINE ITEM
+ */
+
+/**
+ * Creates a a line item.
  * @param {Object} options
  */
 function commerce_line_item_create(options) {
@@ -139,6 +155,10 @@ function commerce_line_item_delete(ids, options) {
 }
 
 /**
+ * ORDER
+ */
+
+/**
  * Retrieves an order.
  * @param {Number} ids
  * @param {Object} options
@@ -158,8 +178,26 @@ function commerce_order_retrieve(ids, options) {
  */
 function commerce_order_update(order, options) {
   try {
+    var path = 'commerce_order/' + order.order_id + '.json';
+
+    // Cleanse some properties before the call.
     order.order_id = parseInt(order.order_id);
-    var path = 'commerce_order/' + order.order_id + '.json' /* &flatten_fields=false */;
+    order.uid = parseInt(order.uid);
+    order.created = parseInt(order.created);
+    order.changed = parseInt(order.changed);
+
+    // Make a copy of the order locally, and remove any protected properties.
+    var data = $.extend({}, order);
+    if (data.revision_id) { delete data.revision_id; }
+    if (data.revision_uid) { delete data.revision_uid; }
+    if (data.revision_timestamp) { delete data.revision_timestamp; }
+    if (data.revision_hostname) { delete data.revision_hostname; }
+    if (data.commerce_order_total_formatted) { delete data.commerce_order_total_formatted; }
+    if (data.commerce_line_items_entities) { delete data.commerce_line_items_entities; }
+    if (data.commerce_customer_billing_entities) { delete data.commerce_customer_billing_entities; }
+    if (data.data) { delete data.data; }
+
+    // Make the call.
     Drupal.services.call({
       method: 'PUT',
       path: path,
@@ -168,24 +206,21 @@ function commerce_order_update(order, options) {
       entity_type: 'commerce_order',
       entity_id: order.order_id,
       bundle: null,
-      data: JSON.stringify(order),
-      success: function(data) {
-        try {
-          if (options.success) { options.success(data); }
-        }
-        catch (error) { console.log('commerce_order_update - success - ' + error); }
+      data: JSON.stringify(data),
+      success: function(result) {
+        if (options.success) { options.success(result); }
       },
       error: function(xhr, status, message) {
-        try {
-          if (options.error) { options.error(xhr, status, message); }
-        }
-        catch (error) { console.log('commerce_order_update - error - ' + error); }
+        if (options.error) { options.error(xhr, status, message); }
       }
     });
   }
   catch (error) { console.log('commerce_order_update - ' + error); }
 }
 
+/**
+ * PRODUCT DISPLAY
+ */
 
 /**
  * Retrieves a product display.
@@ -199,6 +234,10 @@ function commerce_product_display_retrieve(ids, options) {
   }
   catch (error) { console.log('commerce_product_display_retrieve - ' + error); }
 }
+
+/**
+ * PRODUCT
+ */
 
 /**
  * Retrieves a commerce product.
@@ -275,4 +314,62 @@ function commerce_product_index(query, options) {
     Drupal.services.call(options);
   }
   catch (error) { console.log('commerce_product_index - ' + error); }
+}
+
+/**
+ * CUSTOMER PROFILE
+ */
+
+/**
+ * Creates a customer profile.
+ * @param {Object} options
+ */
+function commerce_customer_profile_create(customer_profile, options) {
+  try {
+    options.method = 'POST';
+    options.path = 'customer-profile.json';
+    options.service = 'customer-profile';
+    options.resource = 'create';
+    options.data = JSON.stringify(customer_profile);
+    Drupal.services.call(options);
+  }
+  catch (error) { console.log('commerce_customer_profile_create - ' + error); }
+}
+
+/**
+ * Update a customer profile.
+ * @param {Object} customer_profile
+ * @param {Object} options
+ */
+function commerce_customer_profile_update(customer_profile, options) {
+  try {
+    // Cleanse some properties before the call.
+    customer_profile.profile_id = parseInt(customer_profile.profile_id);
+    customer_profile.uid = parseInt(customer_profile.uid);
+    customer_profile.created = parseInt(customer_profile.created);
+    customer_profile.changed = parseInt(customer_profile.changed);
+
+    // Make a copy of the order locally, and remove any protected properties.
+    var data = $.extend({}, customer_profile);
+    if (data.revision_id) { delete data.revision_id; }
+    if (data.revision_uid) { delete data.revision_uid; }
+    if (data.revision_timestamp) { delete data.revision_timestamp; }
+    if (typeof data.data !== 'undefined') { delete data.data; }
+
+    // Set up defaults and make the call.
+    services_resource_defaults(options, 'commerce_customer_profile', 'update');
+    entity_update('commerce_customer_profile', null, data, options);
+  }
+  catch (error) { console.log('commerce_customer_profile_update - ' + error); }
+}
+
+/**
+ * Deletes a customer profile.
+ */
+function commerce_customer_profile_delete(ids, options) {
+  try {
+    services_resource_defaults(options, 'commerce_customer_profile', 'delete');
+    entity_delete('commerce_customer_profile', ids, options);
+  }
+  catch (error) { console.log('commerce_customer_profile_delete - ' + error); }
 }
