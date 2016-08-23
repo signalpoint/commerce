@@ -9,44 +9,57 @@ I understand this module is quite popular, and is no longer working very well. I
 
 ## Drupal Setup
 
-Step 1. Download and enable the Commerce Services and the Commerce DrupalGap modules on your
-Drupal site:
+Step 1. Download and enable the Commerce Services and the Commerce DrupalGap modules on your Drupal site:
 
-* https://drupal.org/project/commerce_services
-* https://drupal.org/project/commerce_drupalgap
+- https://drupal.org/project/commerce_services
+- https://drupal.org/project/commerce_drupalgap
 
-Step 1a. Patch the commerce_services module in Drupal with these patches:
+Step 1a. Patch the `commerce_services` module in Drupal with these patches:
 
 - https://www.drupal.org/node/1979246
 - https://www.drupal.org/node/2024813
 - https://www.drupal.org/node/2402977
 - https://www.drupal.org/node/2475219
+- https://www.drupal.org/node/2643530
+
+Here are some terminal commands to quickly accomplish this:
+
+```
+cd sites/all/modules/commerce_services
+wget https://www.drupal.org/files/issues/customer_profile_crud-2643530-1.patch
+git apply -v customer_profile_crud-2643530-1.patch
+```
 
 Step 2. After enabling the Commerce DrupalGap module on your site, then flush all of Drupal's caches for good luck.
 
 Step 3. Go to `admin/structure/services/list/drupalgap/resources` and enable the
 following resources:
 
-- product-display
- - index
- - retrieve
-- product
- - index
- - retrieve
 - cart
  - index
  - create
-- order
+- checkout_complete
+ - create
+- customer-profile
  - index
  - retrieve
- - update
+ - udpate
+ - delete
 - line-item
  - index
  - retrieve
  - udpate
  - delete
-- checkout_complete
- - create
+- product
+ - index
+ - retrieve
+- product-display
+ - index
+ - retrieve
+- order
+ - index
+ - retrieve
+ - update
 
 Step 4. Go to `admin/people/permissions` and consider enabling these permissions for
 the roles mentioned:
