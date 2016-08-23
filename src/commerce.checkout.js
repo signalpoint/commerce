@@ -120,27 +120,49 @@ function commerce_checkout_view_validate(form, form_state) {
  */
 function commerce_checkout_view_submit(form, form_state) {
   try {
-
-    // Load the order...
-    //commerce_order_load(form_state.values.order_id, {
-    //  success: function(order) {
-    //    console.log(order);
-    //  }
-    //});
-    //
-    //console.log(form, form_state);
-    //return;
-
-    // Update the cart's billing information.
-    //commerce_order_update(order, options);
-
+    //console.log(form_state.values);
 
     variable_set('commerce_checkout_form_state', form_state);
-    var path = 'checkout/review/' + form_state.values['order_id'];
-    if (drupalgap.commerce.commerce_shipping) {
-      path = 'checkout/shipping/' + form_state.values['order_id'];
-    }
-    drupalgap_goto(path);
+    var order_id = form_state.values.order_id;
+
+    // Load the order...
+    commerce_order_load(order_id, {
+      success: function(order) {
+        //console.log(order);
+
+        // When continuing, send them along to review their order unless shipping is enabled,
+        // then send them off to shipping first.
+        var done = function() {
+          drupalgap_goto(
+              drupalgap.commerce.commerce_shipping ?
+              'checkout/shipping/' + order_id : 'checkout/review/' + order_id
+          );
+        };
+
+        // If there is no billing customer profile on the order, create the customer
+        // profile and attach it to the order,
+        if (!order.commerce_customer_billing) {
+          commerce_customer_profile_create({
+            type: 'billing',
+            commerce_customer_address: form_state.values.billing_information
+          }, {
+            success: function(customer_profile) {
+              order.commerce_customer_billing = customer_profile.profile_id;
+              commerce_order_update(order, { success: done });
+            }
+          });
+        }
+        else {
+          // They already have a billing customer profile on the order, update the customer profile
+          // then continue.
+          var profile_id = order.commerce_customer_billing;
+          var customer_profile = order.commerce_customer_billing_entities[profile_id];
+          customer_profile.commerce_customer_address = form_state.values.billing_information;
+          commerce_customer_profile_update(customer_profile, { success: done });
+        }
+
+      }
+    });
   }
   catch (error) { console.log('commerce_checkout_view_submit - ' + error); }
 }
