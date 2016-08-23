@@ -54,7 +54,7 @@ function commerce_menu() {
  */
 function commerce_services_postprocess(options, data) {
   try {
-    console.log(options.service, options.resource);
+    //console.log(options.service, options.resource);
     // Extract the commerce object from the system connect result data.
     if (options.service == 'system' && options.resource == 'connect') {
       if (data.commerce) { drupalgap.commerce = data.commerce; }
