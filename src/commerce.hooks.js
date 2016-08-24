@@ -41,7 +41,6 @@ function commerce_menu() {
     items['checkout/complete/%'] = {
       'title': 'Checkout complete',
       'page_callback': 'commerce_checkout_complete_view',
-      'pageshow': 'commerce_checkout_complete_view_pageshow',
       'page_arguments': [2]
     };
     return items;

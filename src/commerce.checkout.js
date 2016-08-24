@@ -1,42 +1,12 @@
+function commerce_checkout_complete_container_id(order_id) {
+  return 'commerce_checkout_complete_' + order_id;
+}
+
 /**
  *
  */
 function commerce_checkout_complete_view(order_id) {
-  try {
-    return '<div id="commerce_checkout_complete_' + order_id + '"></div>';
-  }
-  catch (error) {
-    console.log('commerce_checkout_complete_view - ' + error);
-  }
-}
-
-
-/**
- *
- */
-function commerce_checkout_complete_view_pageshow(order_id) {
-  try {
-    commerce_checkout_complete({
-      data: { order_id: order_id },
-      success: function(result) {
-        var checkout_complete_html = '<div>Checkout Complete</div>';
-        $('#commerce_checkout_complete_' + order_id).html(checkout_complete_html).trigger('create');
-      },
-      error: function(xhr, status, message) {
-        try {
-          if (options.error) {
-            options.error(xhr, status, message);
-          }
-        }
-        catch (error) {
-          console.log('commerce_checkout_complete - error - ' + error);
-        }
-      }
-    });
-  }
-  catch (error) {
-    console.log('commerce_checkout_complete_view_pageshow - ' + error);
-  }
+  return '<div id="' + commerce_checkout_complete_container_id(order_id) + '"></div>';
 }
 
 /**
