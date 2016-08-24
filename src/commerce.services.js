@@ -195,6 +195,7 @@ function commerce_order_update(order, options) {
     if (data.commerce_order_total_formatted) { delete data.commerce_order_total_formatted; }
     if (data.commerce_line_items_entities) { delete data.commerce_line_items_entities; }
     if (data.commerce_customer_billing_entities) { delete data.commerce_customer_billing_entities; }
+    if (data.rdf_mapping) { delete data.rdf_mapping; }
     if (data.data) { delete data.data; }
 
     // Make the call.
