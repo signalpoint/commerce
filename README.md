@@ -3,10 +3,6 @@ commerce
 
 The Drupal Commerce module for DrupalGap.
 
-# Disclaimer
-
-I understand this module is quite popular, and is no longer working very well. I wrote it in 2014 as a demonstration for DrupalCon Austin, and hoped a client of mine would actually need it so development could continue. To this day, no client of mine has needed it, nor do I need it on any personal projects, so this project is no longer maintained. If someone wants to become a co-maintainer of this, please contact me, otherwise for any improvements to happen on this project people will need to [purchase some development time from me](https://easystreet3.com/purchase-time). Note, I will not provide any free estimates on how long it will take. Good luck, and happy coding! - Tyler Frankenstein
-
 ## Drupal Setup
 
 Step 1. Download and enable the Commerce Services and the Commerce DrupalGap modules on your Drupal site:
