@@ -223,45 +223,15 @@ function commerce_cart_container_id(entity_type, entity_id) {
   catch (error) { console.log('commerce_cart_container_id - ' + error); }
 }
 
+function commerce_checkout_complete_container_id(order_id) {
+  return 'commerce_checkout_complete_' + order_id;
+}
+
 /**
  *
  */
 function commerce_checkout_complete_view(order_id) {
-  try {
-    return '<div id="commerce_checkout_complete_' + order_id + '"></div>';
-  }
-  catch (error) {
-    console.log('commerce_checkout_complete_view - ' + error);
-  }
-}
-
-
-/**
- *
- */
-function commerce_checkout_complete_view_pageshow(order_id) {
-  try {
-    commerce_checkout_complete({
-      data: { order_id: order_id },
-      success: function(result) {
-        var checkout_complete_html = '<div>Checkout Complete</div>';
-        $('#commerce_checkout_complete_' + order_id).html(checkout_complete_html).trigger('create');
-      },
-      error: function(xhr, status, message) {
-        try {
-          if (options.error) {
-            options.error(xhr, status, message);
-          }
-        }
-        catch (error) {
-          console.log('commerce_checkout_complete - error - ' + error);
-        }
-      }
-    });
-  }
-  catch (error) {
-    console.log('commerce_checkout_complete_view_pageshow - ' + error);
-  }
+  return '<div id="' + commerce_checkout_complete_container_id(order_id) + '"></div>';
 }
 
 /**
@@ -982,7 +952,6 @@ function commerce_menu() {
     items['checkout/complete/%'] = {
       'title': 'Checkout complete',
       'page_callback': 'commerce_checkout_complete_view',
-      'pageshow': 'commerce_checkout_complete_view_pageshow',
       'page_arguments': [2]
     };
     return items;
@@ -1357,6 +1326,7 @@ function commerce_order_update(order, options) {
     if (data.commerce_order_total_formatted) { delete data.commerce_order_total_formatted; }
     if (data.commerce_line_items_entities) { delete data.commerce_line_items_entities; }
     if (data.commerce_customer_billing_entities) { delete data.commerce_customer_billing_entities; }
+    if (data.rdf_mapping) { delete data.rdf_mapping; }
     if (data.data) { delete data.data; }
 
     // Make the call.
