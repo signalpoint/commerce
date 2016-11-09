@@ -165,7 +165,7 @@ This module leaves it up to you to theme the order completion screen the way you
 function my_module_deviceready() {
 
   // Take over the rendering of the checkout complete page.
-  drupalgap.menu_links['checkout/complete/%'].pageshow = 'my_premium_checkout_complete_pageshow';
+  drupalgap.menu_links['checkout/complete/%'].pageshow = 'my_module_checkout_complete_pageshow';
 
 }
 
